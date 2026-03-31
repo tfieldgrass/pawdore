@@ -9,6 +9,18 @@ const allPosts = (await getCollection('blog')).sort(
 function formatDate(date: Date) {
   return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
+
+// Map posts to hero images
+const imageMap: { [key: string]: string } = {
+  'best-harness-for-dogs-that-pull': 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&h=300&fit=crop',
+  'best-dog-food-for-sensitive-stomachs': 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&h=300&fit=crop',
+  'best-dog-beds-for-large-breeds': 'https://images.unsplash.com/photo-1534361960057-19889db9621e?w=600&h=300&fit=crop',
+  'kong-vs-nylabone-which-is-better': 'https://images.unsplash.com/photo-1535930749574-1399327ce78f?w=600&h=300&fit=crop',
+};
+
+function getImageForPost(postId: string): string {
+  return imageMap[postId] || 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=300&fit=crop';
+}
 ---
 
 <BaseLayout
@@ -18,6 +30,7 @@ function formatDate(date: Date) {
   <section class="hero">
     <h1>Find the Best Products for Your Best Friend</h1>
     <p>Honest, research-backed reviews and buyer's guides to help you choose the right gear, food, and care products for your dog.</p>
+    <img src="https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=1200&h=400&fit=crop" alt="Happy dog" />
   </section>
 
   <div class="container">
@@ -33,6 +46,7 @@ function formatDate(date: Date) {
     <div class="article-grid">
       {allPosts.map((post) => (
         <article class="article-card">
+          <img src={getImageForPost(post.id)} alt={post.data.title} />
           <div class="article-card-body">
             <span class="category-tag">{post.data.category}</span>
             <h3><a href={`/blog/${post.id}`}>{post.data.title}</a></h3>

@@ -11,6 +11,18 @@ function formatDate(date: Date) {
 }
 
 const categories = [...new Set(allPosts.map(p => p.data.category))];
+
+// Map posts to hero images
+const imageMap: { [key: string]: string } = {
+  'best-harness-for-dogs-that-pull': 'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=600&h=300&fit=crop',
+  'best-dog-food-for-sensitive-stomachs': 'https://images.unsplash.com/photo-1589924691995-400dc9ecc119?w=600&h=300&fit=crop',
+  'best-dog-beds-for-large-breeds': 'https://images.unsplash.com/photo-1534361960057-19889db9621e?w=600&h=300&fit=crop',
+  'kong-vs-nylabone-which-is-better': 'https://images.unsplash.com/photo-1535930749574-1399327ce78f?w=600&h=300&fit=crop',
+};
+
+function getImageForPost(postId: string): string {
+  return imageMap[postId] || 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=300&fit=crop';
+}
 ---
 
 <BaseLayout
@@ -19,11 +31,12 @@ const categories = [...new Set(allPosts.map(p => p.data.category))];
 >
   <div class="container">
     <h1 style="margin-bottom: 0.5rem;">All Reviews & Guides</h1>
-    <p style="color: #555b6e; margin-bottom: 2rem;">Browse our latest dog product reviews and buying guides.</p>
+    <p style="color: #4a4a4a; margin-bottom: 2rem;">Browse our latest dog product reviews and buying guides.</p>
 
     <div class="article-grid">
       {allPosts.map((post) => (
         <article class="article-card">
+          <img src={getImageForPost(post.id)} alt={post.data.title} />
           <div class="article-card-body">
             <span class="category-tag">{post.data.category}</span>
             <h3><a href={`/blog/${post.id}`}>{post.data.title}</a></h3>
