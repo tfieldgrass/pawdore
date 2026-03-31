@@ -1,0 +1,46 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const allPosts = (await getCollection('blog')).sort(
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
+);
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+---
+
+<BaseLayout
+  title="Honest Dog Product Reviews & Buyer's Guides"
+  description="PawDore helps you find the best products for your dog. Expert reviews, comparisons, and buyer's guides for harnesses, food, beds, toys, and more."
+>
+  <section class="hero">
+    <h1>Find the Best Products for Your Best Friend</h1>
+    <p>Honest, research-backed reviews and buyer's guides to help you choose the right gear, food, and care products for your dog.</p>
+  </section>
+
+  <div class="container">
+    <h2 style="margin-bottom: 0.5rem;">Latest Reviews & Guides</h2>
+    <p style="color: #555b6e; margin-bottom: 1rem;">In-depth product reviews to help you make the best choice for your pup.</p>
+
+    {allPosts.length === 0 && (
+      <p style="text-align: center; color: #999; padding: 3rem 0;">
+        New reviews coming soon! We're currently testing and researching products.
+      </p>
+    )}
+
+    <div class="article-grid">
+      {allPosts.map((post) => (
+        <article class="article-card">
+          <div class="article-card-body">
+            <span class="category-tag">{post.data.category}</span>
+            <h3><a href={`/blog/${post.id}`}>{post.data.title}</a></h3>
+            <p>{post.data.description}</p>
+            <div class="meta">{formatDate(post.data.pubDate)}</div>
+          </div>
+        </article>
+      ))}
+    </div>
+  </div>
+</BaseLayout>
