@@ -1,0 +1,63 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+}
+
+const { title, description, ogImage } = Astro.props;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="canonical" href={canonicalURL} />
+  <meta name="description" content={description} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={canonicalURL} />
+  {ogImage && <meta property="og:image" content={ogImage} />}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="robots" content="index, follow" />
+  <title>{title} | PawDore</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="/" class="site-logo">Paw<span>Dore</span></a>
+      <nav>
+        <a href="/">Home</a>
+        <a href="/blog">Reviews</a>
+        <a href="/about">About</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <slot />
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; {new Date().getFullYear()} PawDore. All rights reserved.</p>
+      <p style="margin-top: 0.5rem;">
+        <a href="/affiliate-disclosure">Affiliate Disclosure</a> &middot;
+        <a href="/privacy">Privacy Policy</a>
+      </p>
+      <p style="margin-top: 0.5rem; font-size: 0.75rem;">
+        PawDore is a participant in affiliate programs including the Amazon Services LLC Associates Program.
+        As an Amazon Associate, we earn from qualifying purchases.
+      </p>
+    </div>
+  </footer>
+</body>
+</html>
