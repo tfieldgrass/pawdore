@@ -1,0 +1,74 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  pubDate: Date;
+  updatedDate?: Date;
+  heroImage?: string;
+  category: string;
+  author?: string;
+}
+
+const { title, description, pubDate, updatedDate, heroImage, category, author = 'PawDore Team' } = Astro.props;
+
+function formatDate(date: Date) {
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+---
+
+<BaseLayout title={title} description={description} ogImage={heroImage}>
+  <style is:inline>
+    .blog-hero-section {
+      background: linear-gradient(135deg, #0d3b66 0%, #16697a 100%);
+      color: white;
+      padding: 3rem 1.5rem;
+      text-align: center;
+    }
+
+    .blog-hero-section h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      line-height: 1.3;
+      color: white;
+    }
+
+    .blog-hero-meta {
+      font-size: 1rem;
+      opacity: 0.95;
+      margin-bottom: 1.5rem;
+    }
+
+    .blog-hero-image {
+      margin-top: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+      max-width: 100%;
+      height: auto;
+    }
+  </style>
+
+  <article>
+    <div class="blog-hero-section">
+      <span class="category-tag">{category}</span>
+      <h1>{title}</h1>
+      <div class="blog-hero-meta">
+        By {author} &middot; Published {formatDate(pubDate)}
+        {updatedDate && <span> &middot; Updated {formatDate(updatedDate)}</span>}
+      </div>
+      {heroImage && <img src={heroImage} alt={title} class="blog-hero-image" />}
+    </div>
+
+    <div class="container">
+      <div class="affiliate-disclosure">
+        <strong>Affiliate Disclosure:</strong> PawDore earns a commission from qualifying purchases made through the links in this article, at no additional cost to you. We only recommend products we believe in.
+      </div>
+
+      <div class="post-content">
+        <slot />
+      </div>
+    </div>
+  </article>
+</BaseLayout>
