@@ -36,7 +36,7 @@ The PetSafe Smart Feed consistently comes out on top for good reason. It holds 2
 
 **Price:** Around $170–$190
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=petsafe+smart+feed) | [Check Price on Amazon](https://www.amazon.com/s?k=petsafe+smart+feed+automatic+dog+feeder)
 
 ---
 
@@ -60,7 +60,7 @@ If you want a solid automatic feeder without the smart home price tag, the WOPET
 
 **Price:** Around $45–$60
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=wopet+automatic+feeder) | [Check Price on Amazon](https://www.amazon.com/s?k=wopet+automatic+dog+feeder)
 
 ---
 
@@ -85,7 +85,7 @@ This one is completely different from a traditional automatic feeder. Instead of
 
 **Price:** Around $150–$170
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=sure+petcare+microchip+feeder) | [Check Price on Amazon](https://www.amazon.com/s?k=sure+petcare+microchip+pet+feeder)
 
 ---
 
@@ -109,7 +109,7 @@ PetLibro has been gaining a loyal following, and the Granary model shows why. It
 
 **Price:** Around $100–$130
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=petlibro+automatic+feeder) | [Check Price on Amazon](https://www.amazon.com/s?k=petlibro+granary+automatic+dog+feeder)
 
 ---
 
@@ -134,7 +134,7 @@ Sometimes you don't need Wi-Fi, cameras, or apps. The PetSafe 5-Meal feeder is a
 
 **Price:** Around $35–$45
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=petsafe+5+meal+feeder) | [Check Price on Amazon](https://www.amazon.com/s?k=petsafe+5+meal+automatic+pet+feeder)
 
 ---
 

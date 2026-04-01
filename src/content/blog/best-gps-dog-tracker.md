@@ -37,7 +37,7 @@ The Fi Series 3 is the tracker most often recommended by vets and dog profession
 
 **Price:** Around $100 for the device + subscription
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=fi+series+3+dog+tracker) | [Check Price on Amazon](https://www.amazon.com/s?k=fi+series+3+gps+dog+tracker)
 
 ---
 
@@ -64,7 +64,7 @@ Technically not a "dog tracker," but AirTags have become hugely popular for trac
 
 **Price:** Around $25–$30 (plus a collar mount for $8–$15)
 
-[Check Price on Amazon](#)
+[Check Price on Amazon](https://www.amazon.com/s?k=apple+airtag)
 
 ---
 
@@ -90,7 +90,7 @@ Tractive offers the best balance of features and price. The tracker provides rea
 
 **Price:** Around $50 for the device + subscription from $5/month
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=tractive+gps+dog+tracker) | [Check Price on Amazon](https://www.amazon.com/s?k=tractive+gps+dog+tracker)
 
 ---
 
@@ -115,7 +115,7 @@ Whistle started as a pet fitness tracker and evolved into a full GPS unit. The H
 
 **Price:** Around $100 for the device + subscription from $10/month
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=whistle+health+gps+dog+tracker) | [Check Price on Amazon](https://www.amazon.com/s?k=whistle+health+gps+dog+tracker)
 
 ---
 
@@ -142,7 +142,7 @@ The Garmin T5 is in a different league. Designed for hunting and working dogs, i
 
 **Price:** Around $250 for the collar + $300+ for the handheld unit
 
-[Check Price on Amazon](#)
+[Check Price on Amazon](https://www.amazon.com/s?k=garmin+t5+gps+dog+collar)
 
 ---
 

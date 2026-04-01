@@ -37,7 +37,7 @@ This is the shampoo most vets recommend as a first step for itchy dogs. It conta
 
 **Price:** Around $10–$14 for 16oz
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=veterinary+formula+clinical+care+antiseptic+antifungal+shampoo) | [Check Price on Amazon](https://www.amazon.com/s?k=veterinary+formula+clinical+care+antiseptic+antifungal+dog+shampoo)
 
 ---
 
@@ -62,7 +62,7 @@ Earthbath has been a favourite among natural pet product enthusiasts for years. 
 
 **Price:** Around $10–$13 for 16oz
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=earthbath+oatmeal+aloe+dog+shampoo) | [Check Price on Amazon](https://www.amazon.com/s?k=earthbath+oatmeal+aloe+dog+shampoo)
 
 ---
 
@@ -87,7 +87,7 @@ Douxo is a veterinary dermatology brand that most pet owners haven't heard of bu
 
 **Price:** Around $18–$25 for 200ml
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=douxo+s3+calm+shampoo) | [Check Price on Amazon](https://www.amazon.com/s?k=douxo+s3+calm+dog+shampoo)
 
 ---
 
@@ -113,7 +113,7 @@ When regular oatmeal shampoo isn't cutting it, OxyMed steps things up. It combin
 
 **Price:** Around $12–$16 for 20oz
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=tropiclean+oxymed+oatmeal+rinse) | [Check Price on Amazon](https://www.amazon.com/s?k=tropiclean+oxymed+medicated+oatmeal+dog+shampoo)
 
 ---
 
@@ -139,7 +139,7 @@ Burt's Bees brings their human skincare philosophy to dogs with this simple, aff
 
 **Price:** Around $6–$9 for 16oz
 
-[Check Price on Chewy](#) | [Check Price on Amazon](#)
+[Check Price on Chewy](https://www.chewy.com/s?query=burts+bees+oatmeal+dog+shampoo) | [Check Price on Amazon](https://www.amazon.com/s?k=burts+bees+oatmeal+dog+shampoo)
 
 ---
 
