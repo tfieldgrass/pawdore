@@ -147,19 +147,28 @@ Fallbacks because GPS alone isn't enough:
 actual tee-off times being confirmed, re-broadcast live on every change.
 
 **Tee-off confirmation** (moves the queue) — support all three, club picks:
-- Starter/pro-shop taps "teed off" (most reliable).
-- A player in the group taps "we're off" (geofence-validated: must be at tee 1).
-- Auto-detect: group's phones leave the 1st-tee geofence heading down the 1st.
+- **Virtual starter mode (primary for Burhill):** a player in the group taps
+  "we're off", geofence-validated at tee 1, with auto-detect (phones leaving
+  the 1st-tee zone) as corroboration and a timeout-based fallback (assume
+  teed off N min after being called if signals agree). The club's stated aim
+  is to *remove the need for a staffed starter*, so this flow must be robust
+  unattended — pro-shop gets an exceptions view (stalled tee, dispute) rather
+  than a per-group task.
+- Starter/pro-shop taps "teed off" (staffed mode, most reliable).
+- Auto-detect only (no tap), for low-stakes sessions.
 
 **No-shows:** when called, a group has a grace period (configurable, e.g.
 5 min) to reach the tee; otherwise admin can skip them (drop back N places or
 remove). All overrides logged.
 
-**Hybrid with bookings [DISCUSS — important]:** very few clubs are 100%
-roll-up. The realistic model is the club defines **roll-up windows** (e.g.
-weekdays before 9am, Sat 7–10) and possibly reserved booked slots inside
-them. v1 keeps our own simple tee sheet; integrating with BRS/intelligentgolf
-tee sheets is a later (and commercially significant) step.
+**Hybrid with bookings:** the club's stated preference is tee-time-style
+structure — which is exactly what this system provides for walk-up demand:
+the roll-up queue *is* a self-filling tee sheet. The club defines **roll-up
+windows** (e.g. weekdays before 9am, Sat 7–10) and possibly reserved booked
+slots inside them; everything inside a window is queue-managed, with the
+same interval/group-size discipline as booked play. v1 keeps our own simple
+tee sheet; integrating with BRS/intelligentgolf tee sheets is a later (and
+commercially significant) step.
 
 ## 5. Club settings (admin)
 
@@ -214,17 +223,24 @@ tee sheets is a later (and commercially significant) step.
 3. **Analytics for the club** — rounds/day, queue length by hour, average
    wait, average round time, no-show rate, utilisation heatmap. (Matches
    intelligentgolf's "Claritee" and Tagmarshal's reporting pitch.)
-4. **Privacy/GDPR** — location tracking needs explicit opt-in, on-course only
+4. **Clubhouse footfall forecasting** — the system knows three things no
+   other club system does: who has *arrived* (check-in), who is *about to
+   finish* (group on the 16th ≈ in the bar in 40 min), and historic demand
+   curves. Surface this as a live "expected finishers" dashboard for F&B
+   (kitchen/bar staffing, halfway-hut stocking) plus a morning forecast of
+   the day's footfall. This is a club-side revenue feature, not a golf
+   feature — and a key part of the Burhill ROI case (§10).
+5. **Privacy/GDPR** — location tracking needs explicit opt-in, on-course only
    (auto-stop after round), retention limits, and club data-processing
    agreements. Pace "league tables of shame" must be committee-only.
-5. **Anti-spoofing/fairness** — mock-location apps exist; mitigations:
+6. **Anti-spoofing/fairness** — mock-location apps exist; mitigations:
    QR check-in option, plausibility checks (speed/teleport detection), and
    making the starter confirmation authoritative.
-6. **Offline tolerance** — rural courses have poor signal. Queue state cached
+7. **Offline tolerance** — rural courses have poor signal. Queue state cached
    on device; score entry offline-first with sync.
-7. **Accessibility of the no-phone path** — older membership is exactly who
+8. **Accessibility of the no-phone path** — older membership is exactly who
    roll-ups serve. Kiosk + admin add must be first-class, not an afterthought.
-8. **Comms** — a simple message-to-queue / message-to-course broadcast
+9. **Comms** — a simple message-to-queue / message-to-course broadcast
    ("halfway hut closed today") covers a lot of "club features" cheaply.
 
 ## 9. Risks / open questions
@@ -260,31 +276,39 @@ plus leisure brands. Two consequences:
 our app owns everything inside those windows. An IG tee-sheet integration is
 the phase-4 prize.
 
-### Pricing — reality check on £10/member/month
+### Pricing — agreed: £1 per member per month
 
-£10/member/month (£120/member/year) is well above market. Benchmarks:
-- A full club-management suite (intelligentgolf — reputedly the *most*
-  expensive) costs a club on the order of low-thousands £/year — i.e. roughly
-  **30–80p per member per month** for everything the club runs on.
-- HowDidiDo charges *members* £2.99–£9.99 **per year** for the premium app.
-- At ~1,000+ members, £10/m/m ≈ £120k+/year from one club — more than the
-  club's entire software budget several times over, and as a membership
-  pass-through it's a visible +£120 (~6%) on a £2,000 sub.
+£1/member/month (£12/member/year), with the club choosing to absorb it or
+pass it through on the subscription (opex, not capex — monthly SaaS billing,
+no upfront fee, cancel-anytime in year one). Benchmarks that make this an
+easy yes: HowDidiDo charges members £2.99–£9.99/yr; a full club-management
+suite costs the club roughly 30–80p/member/month equivalent. At ~1,000+
+members this is ~£12k+/yr from Burhill alone, and a BGL portfolio deal
+(11 venues, discounted flat rate per venue) is where it scales.
+Phase 2/3 features (pace analytics, scoring/sweeps) become upsell tiers later.
+**Pilot:** free or nominal for one season in exchange for design-partner
+access, a named case study, and the intro to BGL head office.
 
-**Proposed model instead:**
-- **Pilot (Burhill):** free or nominal for one season in exchange for
-  design-partner access, named case study, and an intro to BGL head office.
-- **List price:** £1–2 per member per month (club chooses to absorb or pass
-  through — at £12–24/yr pass-through it's an easy sell next to HowDidiDo's
-  £9.99), **or** a flat site licence of ~£3–6k/venue/year, whichever framing
-  the buyer prefers. The opex-not-capex instinct is right — monthly SaaS
-  billing, no upfront fee, cancel-anytime in year one removes procurement
-  friction.
-- **Group deal:** BGL portfolio pricing (e.g. 11 venues at a discounted flat
-  rate) — this is where the £100k+/year revenue actually lives, at a price
-  per venue the buyer can sign without board-level pain.
-- Phase 2/3 features (pace analytics, scoring/sweeps) become the upsell tiers
-  that grow ARPU later, once the queue has made itself indispensable.
+### The club-side ROI case (why the club says yes)
+
+The member pitch is fairness and convenience; the *club* pitch is:
+
+1. **Remove the staffed starter.** Virtual-starter mode (§4) does the
+   calling, sequencing, no-show handling and tee-off confirmation
+   unattended. A weekend starter at ~£12–15/hr × 6h × 2 days ≈ **£7–9k/yr**
+   — the app pays for itself on this line alone at most clubs.
+2. **Tee-time-style control over walk-up golf.** The club prefers the
+   discipline of tee times; the roll-up queue *is* a self-filling tee sheet —
+   same intervals, same group-size rules, but demand-driven. The club gets
+   the manageability without killing the roll-up culture members want.
+3. **Demand data they've never had.** Walk-up play is currently invisible to
+   intelligentgolf. Check-in data gives arrival curves, queue lengths, wait
+   times, utilisation by hour/day — the basis for staffing, course setup and
+   membership-capacity decisions.
+4. **Clubhouse footfall forecasting** (§8.4) — know who's just arrived and
+   who finishes in 40 minutes; staff the bar and kitchen to match. For a
+   group like BGL whose venues lean heavily on F&B revenue, this may be the
+   single most persuasive line in the deck.
 
 **[DISCUSS]** Who's the economic buyer at Burhill — club GM, or does anything
 member-facing route through BGL head office from day one? Worth finding out
