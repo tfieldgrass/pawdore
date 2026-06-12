@@ -97,6 +97,16 @@ button:disabled { opacity: 0.5; cursor: default; }
   50% { box-shadow: 0 0 0 14px rgba(224, 168, 60, 0); }
 }
 
+.joinable-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--green-700);
+}
+.joinable-row button { margin-top: 0; flex-shrink: 0; }
+
 table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
 th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--green-700); vertical-align: top; }
 th { color: var(--green-300); font-weight: 600; }
@@ -149,3 +159,12 @@ body.board { font-size: clamp(14px, 1.6vw, 24px); }
 }
 .board-row .eta { color: var(--green-300); font-variant-numeric: tabular-nums; }
 .board-clock { position: fixed; top: 1vw; right: 2vw; font-size: 2em; font-weight: 800; color: var(--sand); }
+.board-forming-title {
+  margin-top: 0.8em;
+  padding: 0 1em;
+  color: var(--green-300);
+  font-size: 0.85em;
+  letter-spacing: 0.12em;
+  font-weight: 700;
+}
+.board-row.forming { color: var(--green-300); font-style: italic; }

@@ -54,6 +54,13 @@ export interface Player {
 
 export type GroupStatus = 'forming' | 'queued' | 'done' | 'withdrawn';
 
+/** A named playing partner entered by the group creator before they arrive. */
+export interface Invitee {
+  name: string;
+  /** Player id once they have checked in and claimed their spot. */
+  claimedBy: string | null;
+}
+
 export interface Group {
   id: string;
   sessionId: string;
@@ -61,11 +68,11 @@ export interface Group {
   creatorId: string;
   /** Checked-in players who have joined. */
   memberIds: string[];
-  /** Total players the creator expects; group auto-queues when reached. */
-  expectedSize: number;
+  /** Named partners still expected; group auto-queues when all have arrived. */
+  invitees: Invitee[];
   /** Short code friends type to join this group. */
   joinCode: string;
-  /** Singles/pairs can opt in to being merged with others. */
+  /** Whether strangers may fill genuinely spare slots (default true). */
   openToJoiners: boolean;
   status: GroupStatus;
   createdAt: number;
@@ -121,6 +128,25 @@ export interface QueueEntryView {
   calledAt: number | null;
 }
 
+/** A group still waiting for named players, shown on boards and join lists. */
+export interface FormingGroupView {
+  groupId: string;
+  groupName: string;
+  hereNames: string[];
+  waitingForNames: string[];
+  /** Spare capacity a single could take (0 if closed or full). */
+  openSpots: number;
+}
+
+/** A queued group that still has room for joiners. */
+export interface JoinableQueuedView {
+  groupId: string;
+  groupName: string;
+  position: number;
+  playerNames: string[];
+  openSpots: number;
+}
+
 export interface QueueView {
   sessionId: string;
   courseName: string;
@@ -128,4 +154,6 @@ export interface QueueView {
   teeIntervalMin: number;
   nowOnTee: QueueEntryView | null;
   entries: QueueEntryView[];
+  /** Groups not yet on the start list, waiting for players to arrive. */
+  forming: FormingGroupView[];
 }

@@ -74,13 +74,13 @@ describe('groups and the start list', () => {
     assert.equal(engine.getQueueView(s.id).entries.length, 1);
   });
 
-  it('only enters the list when the last expected member arrives', () => {
+  it('only enters the list when the last named invitee arrives', () => {
     const { engine } = makeEngine();
     const s = engine.openSession(SETTINGS);
     const a = checkedInPlayer(engine, 'Alice');
     const b = checkedInPlayer(engine, 'Bob');
     const c = checkedInPlayer(engine, 'Carol');
-    const g = engine.createGroup(s.id, a.id, { expectedSize: 3 });
+    const g = engine.createGroup(s.id, a.id, { inviteeNames: ['Bob', 'Carol'] });
     engine.joinGroup(g.joinCode, b.id);
     assert.equal(g.status, 'forming');
     assert.equal(engine.getQueueView(s.id).entries.length, 0);
@@ -93,7 +93,7 @@ describe('groups and the start list', () => {
     const { engine, clock } = makeEngine();
     const s = engine.openSession(SETTINGS);
     const early = checkedInPlayer(engine, 'Early Ed');
-    const g = engine.createGroup(s.id, early.id, { expectedSize: 2 });
+    const g = engine.createGroup(s.id, early.id, { inviteeNames: ['Late Lou'] });
     clock.tick(60_000);
     const solo = checkedInPlayer(engine, 'Prompt Pat');
     engine.createGroup(s.id, solo.id);
@@ -111,7 +111,9 @@ describe('groups and the start list', () => {
     const players = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7'].map((n) =>
       checkedInPlayer(engine, n),
     );
-    const g = engine.createGroup(s.id, players[0]!.id, { expectedSize: 7 });
+    const g = engine.createGroup(s.id, players[0]!.id, {
+      inviteeNames: ['P2', 'P3', 'P4', 'P5', 'P6', 'P7'],
+    });
     players.slice(1).forEach((p) => engine.joinGroup(g.joinCode, p.id));
 
     const entries = engine.getQueueView(s.id).entries;
@@ -120,13 +122,86 @@ describe('groups and the start list', () => {
     assert.ok(entries.every((e) => e.groupId === g.id));
   });
 
-  it('"go with who is here" queues a partial group', () => {
+  it('"go with who is here" queues a partial group and releases invitees', () => {
     const { engine } = makeEngine();
     const s = engine.openSession(SETTINGS);
     const a = checkedInPlayer(engine, 'A');
-    const g = engine.createGroup(s.id, a.id, { expectedSize: 4 });
+    const g = engine.createGroup(s.id, a.id, { inviteeNames: ['B', 'C', 'D'] });
     engine.goWithWhoIsHere(g.id, a.id);
     assert.equal(g.status, 'queued');
+    assert.equal(g.invitees.length, 0);
+  });
+
+  it('shows forming groups on the board with who they wait for', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const a = checkedInPlayer(engine, 'Tom');
+    engine.createGroup(s.id, a.id, { inviteeNames: ['Dave', 'Bill'] });
+    const view = engine.getQueueView(s.id);
+    assert.equal(view.forming.length, 1);
+    assert.deepEqual(view.forming[0]!.hereNames, ['Tom']);
+    assert.deepEqual(view.forming[0]!.waitingForNames, ['Dave', 'Bill']);
+    assert.equal(view.forming[0]!.openSpots, 1); // 4-ball minus Tom minus 2 invited
+  });
+
+  it('an open joiner can take spare capacity but never a reserved spot', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const a = checkedInPlayer(engine, 'Tom');
+    const g = engine.createGroup(s.id, a.id, { inviteeNames: ['Dave', 'Bill'] });
+
+    const stranger = checkedInPlayer(engine, 'Stranger');
+    engine.joinGroupById(g.id, stranger.id); // takes the one spare spot
+    assert.equal(g.memberIds.length, 2);
+    assert.deepEqual(g.invitees.map((i) => i.claimedBy), [null, null]);
+
+    const another = checkedInPlayer(engine, 'Another');
+    assert.throws(
+      () => engine.joinGroupById(g.id, another.id),
+      (e: EngineError) => e.code === 'group_full',
+    );
+    // Dave's reserved spot is still there for Dave.
+    const dave = checkedInPlayer(engine, 'Dave');
+    engine.joinGroup(g.joinCode, dave.id);
+    assert.equal(g.invitees.find((i) => i.name === 'Dave')!.claimedBy, dave.id);
+  });
+
+  it('listJoinable flags groups expecting this player by name', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const a = checkedInPlayer(engine, 'Tom');
+    engine.createGroup(s.id, a.id, { inviteeNames: ['Dave'], openToJoiners: false });
+    const { forming } = engine.listJoinable(s.id, 'dave');
+    assert.equal(forming.length, 1);
+    assert.equal(forming[0]!.expectingYou, true);
+    // A stranger doesn't even see the closed group.
+    assert.equal(engine.listJoinable(s.id, 'Nobody').forming.length, 0);
+  });
+
+  it('pro shop can merge two queued 2-balls into one 4-ball', () => {
+    const { engine, clock } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const a = checkedInPlayer(engine, 'A1');
+    const gA = engine.createGroup(s.id, a.id, { inviteeNames: ['A2'] });
+    engine.joinGroup(gA.joinCode, checkedInPlayer(engine, 'A2').id);
+    clock.tick(60_000);
+    const b = checkedInPlayer(engine, 'B1');
+    const gB = engine.createGroup(s.id, b.id, { inviteeNames: ['B2'] });
+    engine.joinGroup(gB.joinCode, checkedInPlayer(engine, 'B2').id);
+
+    const merged = engine.mergeGroups(gB.id, gA.id);
+    assert.equal(merged.id, gA.id); // earlier group keeps its position
+    const entries = engine.getQueueView(s.id).entries;
+    assert.equal(entries.length, 1);
+    assert.deepEqual(entries[0]!.playerNames.sort(), ['A1', 'A2', 'B1', 'B2']);
+
+    // A merged 4-ball cannot absorb anyone else.
+    const c = checkedInPlayer(engine, 'C1');
+    const gC = engine.createGroup(s.id, c.id);
+    assert.throws(
+      () => engine.mergeGroups(gA.id, gC.id),
+      (e: EngineError) => e.code === 'group_full',
+    );
   });
 
   it('lets a single join an open queued single (matchmaking)', () => {

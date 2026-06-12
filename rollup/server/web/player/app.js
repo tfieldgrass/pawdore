@@ -137,51 +137,55 @@ function renderJoinOptions() {
   const sessionSel = el('select', {},
     sessions.map((s) => el('option', { value: s.id },
       `${courseName(s.courseId)}${s.mode === 'draw' ? ' (random draw)' : ''}`)));
+  sessionSel.addEventListener('change', () => loadJoinable());
 
   const drawMode = () => sessions.find((s) => s.id === sessionSel.value)?.mode === 'draw';
 
-  const size = el('select', {}, [1, 2, 3, 4, 5, 6, 7, 8].map((n) =>
-    el('option', { value: n }, n === 1 ? 'Just me' : `${n} players`)));
-  const open = el('input', { type: 'checkbox', id: 'open', style: 'width:auto' });
-  const joinCode = el('input', { placeholder: 'e.g. K7PD', style: 'text-transform:uppercase' });
+  const invitees = el('input', {
+    placeholder: 'e.g. Dave Smith, Bill Jones — blank if alone',
+  });
+  const open = el('input', { type: 'checkbox', id: 'open', checked: '', style: 'width:auto' });
 
-  const groupCard = el('div', { class: 'card' }, [
-    el('h2', {}, 'Join the roll-up'),
+  const create = async () => {
+    try {
+      if (drawMode()) {
+        await api('/api/draw/join', {
+          method: 'POST', token: state.token, body: { sessionId: sessionSel.value },
+        });
+      } else {
+        await api('/api/groups', {
+          method: 'POST',
+          token: state.token,
+          body: {
+            sessionId: sessionSel.value,
+            inviteeNames: invitees.value.split(',').map((n) => n.trim()).filter(Boolean),
+            openToJoiners: open.checked,
+          },
+        });
+      }
+      await refreshMe();
+      render();
+    } catch (e) { err.textContent = e.message; }
+  };
+  submitOnEnter(create, invitees);
+
+  $app.append(el('div', { class: 'card' }, [
+    el('h2', {}, 'Start your group'),
     el('label', {}, 'Course'),
     sessionSel,
-    el('label', {}, 'How many in your group (including you)?'),
-    size,
-    el('label', { for: 'open' }, 'Happy for others to join us up?'),
+    el('label', {}, 'Who are you playing with? (they check in when they arrive)'),
+    invitees,
+    el('label', { for: 'open' }, 'Happy for others to join your spare slots?'),
     open,
-    el('button', {
-      onclick: async () => {
-        try {
-          if (drawMode()) {
-            await api('/api/draw/join', {
-              method: 'POST', token: state.token, body: { sessionId: sessionSel.value },
-            });
-          } else {
-            await api('/api/groups', {
-              method: 'POST',
-              token: state.token,
-              body: {
-                sessionId: sessionSel.value,
-                expectedSize: Number(size.value),
-                openToJoiners: open.checked,
-              },
-            });
-          }
-          await refreshMe();
-          render();
-        } catch (e) { err.textContent = e.message; }
-      },
-    }, 'Join'),
-    el('label', {}, 'Or join a friend’s group with their code'),
-    joinCode,
-    el('button', { class: 'secondary', onclick: joinByCode }, 'Join group'),
+    el('button', { onclick: create }, 'Join the roll-up'),
     err,
-  ]);
-  async function joinByCode() {
+  ]));
+
+  // Groups you could join: friends expecting you, and groups with open slots.
+  const joinableCard = el('div', { class: 'card' }, [el('h2', {}, 'Join a group')]);
+  const joinableBody = el('div', {}, el('p', { class: 'muted' }, 'Loading…'));
+  const joinCode = el('input', { placeholder: 'e.g. K7PD', style: 'text-transform:uppercase' });
+  const joinByCode = async () => {
     try {
       await api('/api/groups/join', {
         method: 'POST', token: state.token, body: { joinCode: joinCode.value.trim() },
@@ -189,9 +193,63 @@ function renderJoinOptions() {
       await refreshMe();
       render();
     } catch (e) { err.textContent = e.message; }
-  }
+  };
   submitOnEnter(joinByCode, joinCode);
-  $app.append(groupCard);
+  joinableCard.append(
+    joinableBody,
+    el('label', {}, 'Or use a code a friend shared'),
+    joinCode,
+    el('button', { class: 'secondary', onclick: joinByCode }, 'Join with code'),
+  );
+  $app.append(joinableCard);
+
+  async function loadJoinable() {
+    if (drawMode()) {
+      joinableBody.replaceChildren(
+        el('p', { class: 'muted' }, 'Random draw — groups are drawn at the cut-off.'));
+      return;
+    }
+    try {
+      const { forming, queued } = await api(
+        `/api/sessions/${sessionSel.value}/joinable`, { token: state.token });
+      joinableBody.replaceChildren();
+      const joinOpen = (groupId) => async () => {
+        try {
+          await api(`/api/groups/${groupId}/join-open`, { method: 'POST', token: state.token });
+          await refreshMe();
+          render();
+        } catch (e) { err.textContent = e.message; }
+      };
+      for (const f of forming) {
+        joinableBody.append(el('div', { class: 'joinable-row' }, [
+          el('div', {}, [
+            f.expectingYou ? el('strong', {}, '⭐ They’re expecting you! ') : '',
+            el('span', {}, `${f.groupName} — here: ${f.hereNames.join(', ')}`),
+            f.waitingForNames.length
+              ? el('span', { class: 'muted' }, ` · waiting for ${f.waitingForNames.join(', ')}`)
+              : '',
+            f.openSpots > 0 ? el('span', { class: 'muted' }, ` · ${f.openSpots} open spot${f.openSpots > 1 ? 's' : ''}`) : '',
+          ]),
+          el('button', { class: 'small', onclick: joinOpen(f.groupId) }, 'Join'),
+        ]));
+      }
+      for (const q of queued) {
+        joinableBody.append(el('div', { class: 'joinable-row' }, [
+          el('div', {}, [
+            el('span', {}, `#${q.position} on the list — ${q.playerNames.join(', ')}`),
+            el('span', { class: 'muted' }, ` · ${q.openSpots} open spot${q.openSpots > 1 ? 's' : ''}`),
+          ]),
+          el('button', { class: 'small', onclick: joinOpen(q.groupId) }, 'Join'),
+        ]));
+      }
+      if (forming.length === 0 && queued.length === 0) {
+        joinableBody.append(el('p', { class: 'muted' }, 'No open groups right now.'));
+      }
+    } catch {
+      joinableBody.replaceChildren();
+    }
+  }
+  loadJoinable();
 }
 
 function renderQueueStatus() {
@@ -223,21 +281,28 @@ function renderQueueStatus() {
   }
 
   if (group.status === 'forming') {
+    const waitingFor = group.invitees.filter((i) => !i.claimedBy).map((i) => i.name);
+    const isCreator = state.me.player.id === group.creatorId;
     $app.append(el('div', { class: 'card' }, [
       el('h2', {}, 'Waiting for your group'),
       el('p', {}, [
-        `${group.memberIds.length} of ${group.expectedSize} checked in. Share code `,
+        waitingFor.length
+          ? `Still to arrive: ${waitingFor.join(', ')}. `
+          : `${group.memberIds.length} checked in. `,
+        'Your place on the list is set the moment the last one checks in. Share code ',
         el('strong', { style: 'font-size:1.3em;letter-spacing:0.15em' }, group.joinCode),
-        ' with the others — your place is set when the last one arrives.',
+        ' in case anyone has trouble.',
       ]),
-      el('button', {
-        class: 'secondary',
-        onclick: async () => {
-          await api(`/api/groups/${group.id}/go`, { method: 'POST', token: state.token });
-          await refreshMe();
-          render();
-        },
-      }, 'Go with who’s here'),
+      isCreator
+        ? el('button', {
+            class: 'secondary',
+            onclick: async () => {
+              await api(`/api/groups/${group.id}/go`, { method: 'POST', token: state.token });
+              await refreshMe();
+              render();
+            },
+          }, 'Go with who’s here')
+        : '',
     ]));
   } else if (!called && slots.length > 0) {
     const first = slots[0];

@@ -114,6 +114,40 @@ function renderSessions() {
       table.append(el('tr', {}, el('td', { colspan: 5, class: 'muted' }, 'Queue is empty')));
     }
     card.append(table);
+
+    if (q.forming && q.forming.length > 0) {
+      card.append(el('h2', { style: 'margin-top:14px' }, 'Waiting for players'));
+      const ftable = el('table', {});
+      for (const f of q.forming) {
+        ftable.append(el('tr', {}, [
+          el('td', {}, f.hereNames.join(', ')),
+          el('td', { class: 'muted' },
+            f.waitingForNames.length ? `waiting for ${f.waitingForNames.join(', ')}` : 'ready'),
+          el('td', { class: 'muted' }, f.openSpots > 0 ? `${f.openSpots} open` : ''),
+        ]));
+      }
+      card.append(ftable);
+    }
+
+    // Merge two queued groups (e.g. two 2-balls) into one slot.
+    const mergeable = q.entries.filter((e) => e.status === 'queued' && e.waveCount === 1);
+    if (mergeable.length >= 2) {
+      const optionFor = (e) => el('option', { value: e.groupId },
+        `#${e.position} ${e.playerNames.join(', ')}`);
+      const selA = el('select', {}, mergeable.map(optionFor));
+      const selB = el('select', {}, mergeable.map(optionFor));
+      if (selB.options.length > 1) selB.selectedIndex = 1;
+      card.append(el('h2', { style: 'margin-top:14px' }, 'Merge groups'));
+      card.append(el('div', { class: 'row' }, [
+        el('div', {}, [el('label', {}, 'Group A'), selA]),
+        el('div', {}, [el('label', {}, 'Group B'), selB]),
+        el('div', {}, el('button', {
+          onclick: () => act('/api/admin/groups/merge', {
+            body: { groupIdA: selA.value, groupIdB: selB.value },
+          }),
+        }, 'Merge')),
+      ]));
+    }
     $app.append(card);
   }
 }

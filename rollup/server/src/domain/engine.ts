@@ -198,10 +198,15 @@ export class RollupEngine {
 
   // ---- groups ------------------------------------------------------------
 
+  /**
+   * Create a group, naming the playing partners you expect ("Dave, Bill").
+   * The group only enters the start list when the last named partner has
+   * checked in and claimed their spot. No invitees = queue immediately.
+   */
   createGroup(
     sessionId: string,
     creatorId: string,
-    opts: { name?: string; expectedSize?: number; openToJoiners?: boolean } = {},
+    opts: { name?: string; inviteeNames?: string[]; openToJoiners?: boolean } = {},
   ): Group {
     const session = this.requireOpenSession(sessionId);
     if (session.settings.mode === 'draw') {
@@ -210,69 +215,127 @@ export class RollupEngine {
     const creator = this.requireCheckedIn(creatorId);
     this.requireNotInActiveGroup(sessionId, creatorId);
 
-    const expectedSize = Math.max(1, Math.floor(opts.expectedSize ?? 1));
+    const invitees = (opts.inviteeNames ?? [])
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0)
+      .map((name) => ({ name, claimedBy: null }));
+
     const group: Group = {
       id: this.newId(),
       sessionId,
       name: opts.name?.trim() || `${creator.name}'s group`,
       creatorId,
       memberIds: [creatorId],
-      expectedSize,
+      invitees,
       joinCode: this.makeJoinCode(),
-      openToJoiners: opts.openToJoiners ?? expectedSize === 1,
+      openToJoiners: opts.openToJoiners ?? true,
       status: 'forming',
       createdAt: this.now(),
       queuedAt: null,
     };
     this.state.groups[group.id] = group;
-    this.log('group.created', { groupId: group.id, sessionId, creatorId, expectedSize });
+    this.log('group.created', {
+      groupId: group.id,
+      sessionId,
+      creatorId,
+      waitingFor: invitees.map((i) => i.name),
+    });
 
-    if (group.memberIds.length >= group.expectedSize) this.queueGroup(group);
+    if (this.unclaimed(group).length === 0) this.queueGroup(group);
     return group;
+  }
+
+  /** Invitee spots nobody has claimed yet. */
+  private unclaimed(group: Group) {
+    return group.invitees.filter((i) => i.claimedBy === null);
+  }
+
+  /** Spare capacity a stranger could take (0 when closed to joiners). */
+  private openSpots(group: Group): number {
+    const session = this.getSession(group.sessionId);
+    if (!group.openToJoiners) return 0;
+    if (group.status === 'forming') {
+      return Math.max(
+        0,
+        session.settings.maxGroupSize -
+          group.memberIds.length -
+          this.unclaimed(group).length,
+      );
+    }
+    if (group.status === 'queued') {
+      const open = this.slotsForGroup(group.id).filter((s) => s.status === 'queued');
+      if (open.length !== 1) return 0;
+      return Math.max(0, session.settings.maxGroupSize - open[0]!.playerIds.length);
+    }
+    return 0;
   }
 
   /**
-   * Join a forming group by code, or an already-queued group that is open
-   * to joiners and still has room in a single slot (singles matchmaking).
+   * Join with the code a friend shared. Having the code means you're
+   * invited: you claim your named spot (matching name first, otherwise the
+   * next free one), or take spare capacity if all spots are claimed.
    */
   joinGroup(joinCode: string, playerId: string): Group {
-    this.requireCheckedIn(playerId);
     const group = Object.values(this.state.groups).find(
       (g) =>
-        g.joinCode === joinCode.toUpperCase() &&
+        g.joinCode === joinCode.trim().toUpperCase() &&
         (g.status === 'forming' || g.status === 'queued'),
     );
     if (!group) throw new EngineError('not_found', 'No joinable group with that code');
-    this.requireNotInActiveGroup(group.sessionId, playerId);
+    return this.join(group, playerId, 'code');
+  }
 
+  /** Join an open group from the board/app list — no code needed. */
+  joinGroupById(groupId: string, playerId: string): Group {
+    return this.join(this.getGroup(groupId), playerId, 'open');
+  }
+
+  private join(group: Group, playerId: string, via: 'code' | 'open'): Group {
+    const player = this.requireCheckedIn(playerId);
+    this.requireNotInActiveGroup(group.sessionId, playerId);
     const session = this.requireOpenSession(group.sessionId);
 
     if (group.status === 'forming') {
+      const unclaimed = this.unclaimed(group);
+      const nameMatch = unclaimed.find(
+        (i) => i.name.toLowerCase() === player.name.trim().toLowerCase(),
+      );
+      // Open joiners without a name match may only take spare capacity —
+      // never a spot reserved for a named invitee.
+      const claimable =
+        nameMatch ?? (via === 'code' ? unclaimed[0] : undefined);
+      if (claimable) {
+        claimable.claimedBy = playerId;
+      } else if (this.openSpots(group) === 0) {
+        throw new EngineError(
+          via === 'open' && !group.openToJoiners ? 'group_closed' : 'group_full',
+          'That group has no spots left',
+        );
+      }
       group.memberIds.push(playerId);
-      this.log('group.joined', { groupId: group.id, playerId });
-      if (group.memberIds.length >= group.expectedSize) this.queueGroup(group);
+      this.log('group.joined', { groupId: group.id, playerId, via });
+      if (this.unclaimed(group).length === 0) this.queueGroup(group);
       return group;
     }
 
-    // Queued group: only if open to joiners, single wave, with room.
-    if (!group.openToJoiners) {
-      throw new EngineError('group_closed', 'That group is already on the start list');
+    if (group.status !== 'queued') {
+      throw new EngineError('not_found', 'That group is no longer joinable');
     }
-    const slots = this.slotsForGroup(group.id).filter((s) => s.status === 'queued');
-    if (slots.length !== 1) {
-      throw new EngineError('group_closed', 'That group can no longer be joined');
+    // Queued group: only if open to joiners, single open slot, with room.
+    if (this.openSpots(group) === 0) {
+      throw new EngineError('group_closed', 'That group is already full or closed');
     }
-    const slot = slots[0]!;
-    if (slot.playerIds.length >= session.settings.maxGroupSize) {
-      throw new EngineError('group_full', 'That group is full');
-    }
+    const slot = this.slotsForGroup(group.id).filter((s) => s.status === 'queued')[0]!;
     group.memberIds.push(playerId);
     slot.playerIds.push(playerId);
-    this.log('group.joined_queued', { groupId: group.id, playerId, slotId: slot.id });
+    this.log('group.joined_queued', { groupId: group.id, playerId, slotId: slot.id, via });
+    if (slot.playerIds.length >= session.settings.maxGroupSize) {
+      group.openToJoiners = false;
+    }
     return group;
   }
 
-  /** "Go with who's here" — queue a forming group before everyone arrives. */
+  /** "Go with who's here" — queue now, releasing unarrived invitees. */
   goWithWhoIsHere(groupId: string, byPlayerId: string): Group {
     const group = this.getGroup(groupId);
     if (group.status !== 'forming') {
@@ -281,9 +344,50 @@ export class RollupEngine {
     if (group.creatorId !== byPlayerId) {
       throw new EngineError('forbidden', 'Only the group creator can do that');
     }
-    group.expectedSize = group.memberIds.length;
+    group.invitees = group.invitees.filter((i) => i.claimedBy !== null);
     this.queueGroup(group);
     return group;
+  }
+
+  /**
+   * Pro shop: merge two queued groups (e.g. two 2-balls into a 4-ball).
+   * The merged group keeps the better queue position.
+   */
+  mergeGroups(groupIdA: string, groupIdB: string): Group {
+    const a = this.getGroup(groupIdA);
+    const b = this.getGroup(groupIdB);
+    if (a.id === b.id) throw new EngineError('invalid', 'Pick two different groups');
+    if (a.sessionId !== b.sessionId) {
+      throw new EngineError('invalid', 'Groups are in different sessions');
+    }
+    const session = this.getSession(a.sessionId);
+    const slotsA = this.slotsForGroup(a.id).filter((s) => s.status === 'queued');
+    const slotsB = this.slotsForGroup(b.id).filter((s) => s.status === 'queued');
+    if (a.status !== 'queued' || b.status !== 'queued' || slotsA.length !== 1 || slotsB.length !== 1) {
+      throw new EngineError('invalid', 'Both groups must be on the start list (single slot each)');
+    }
+    const slotA = slotsA[0]!;
+    const slotB = slotsB[0]!;
+    if (slotA.playerIds.length + slotB.playerIds.length > session.settings.maxGroupSize) {
+      throw new EngineError(
+        'group_full',
+        `Combined size exceeds the ${session.settings.maxGroupSize}-ball limit`,
+      );
+    }
+
+    const queue = this.queue(a.sessionId);
+    const [keep, absorb] =
+      queue.indexOf(slotA.id) <= queue.indexOf(slotB.id) ? [a, b] : [b, a];
+    const keepSlot = keep === a ? slotA : slotB;
+    const absorbSlot = keep === a ? slotB : slotA;
+
+    keepSlot.playerIds.push(...absorbSlot.playerIds);
+    keep.memberIds.push(...absorb.memberIds);
+    absorbSlot.status = 'removed';
+    this.removeFromQueue(absorb.sessionId, absorbSlot.id);
+    absorb.status = 'withdrawn';
+    this.log('group.merged', { kept: keep.id, absorbed: absorb.id });
+    return keep;
   }
 
   withdrawGroup(groupId: string, byPlayerId: string | null): Group {
@@ -399,7 +503,7 @@ export class RollupEngine {
         name: `Draw group ${i + 1}`,
         creatorId: memberIds[0]!,
         memberIds,
-        expectedSize: memberIds.length,
+        invitees: [],
         joinCode: this.makeJoinCode(),
         openToJoiners: false,
         status: 'forming',
@@ -557,6 +661,17 @@ export class RollupEngine {
       .filter((s) => s.sessionId === sessionId && s.status === 'teed_off')
       .sort((a, b) => (b.teedOffAt ?? 0) - (a.teedOffAt ?? 0))[0];
 
+    const forming = Object.values(this.state.groups)
+      .filter((g) => g.sessionId === sessionId && g.status === 'forming')
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((g) => ({
+        groupId: g.id,
+        groupName: g.name,
+        hereNames: g.memberIds.map((id) => this.getPlayer(id).name),
+        waitingForNames: this.unclaimed(g).map((i) => i.name),
+        openSpots: this.openSpots(g),
+      }));
+
     return {
       sessionId,
       courseName: course?.name ?? 'Course',
@@ -577,7 +692,44 @@ export class RollupEngine {
           }
         : null,
       entries,
+      forming,
     };
+  }
+
+  /**
+   * Groups a checked-in single could join: forming groups with spare
+   * capacity (or expecting someone with this player's name), and queued
+   * groups that are open with room.
+   */
+  listJoinable(
+    sessionId: string,
+    playerName?: string,
+  ): {
+    forming: (QueueView['forming'][number] & { expectingYou: boolean })[];
+    queued: { groupId: string; groupName: string; position: number; playerNames: string[]; openSpots: number }[];
+  } {
+    const view = this.getQueueView(sessionId);
+    const name = playerName?.trim().toLowerCase();
+    const forming = view.forming
+      .map((f) => ({
+        ...f,
+        expectingYou:
+          !!name && f.waitingForNames.some((w) => w.toLowerCase() === name),
+      }))
+      .filter((f) => f.openSpots > 0 || f.expectingYou);
+
+    const queued = view.entries
+      .filter((e) => e.status === 'queued')
+      .map((e) => ({
+        groupId: e.groupId,
+        groupName: e.groupName,
+        position: e.position,
+        playerNames: e.playerNames,
+        openSpots: this.openSpots(this.getGroup(e.groupId)),
+      }))
+      .filter((q) => q.openSpots > 0);
+
+    return { forming, queued };
   }
 
   events(limit = 100): AuditEvent[] {

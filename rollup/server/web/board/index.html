@@ -62,6 +62,18 @@
           queue.append(el('div', { class: 'board-row' }, ['Queue is empty — walk straight on']));
         }
         section.append(queue);
+
+        if (q.forming && q.forming.length > 0) {
+          section.append(el('div', { class: 'board-forming-title' }, 'WAITING FOR PLAYERS'));
+          for (const f of q.forming) {
+            section.append(el('div', { class: 'board-row forming' }, [
+              el('span', {}, `⏳ ${f.hereNames.join(' · ')}` +
+                (f.waitingForNames.length ? ` — waiting for ${f.waitingForNames.join(', ')}` : '')),
+              el('span', { class: 'eta' },
+                f.openSpots > 0 ? `${f.openSpots} spot${f.openSpots > 1 ? 's' : ''} open` : ''),
+            ]));
+          }
+        }
         $board.append(section);
       }
     }

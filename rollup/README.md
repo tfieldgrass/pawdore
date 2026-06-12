@@ -29,13 +29,19 @@ Implemented engine rules (each covered by a test):
 
 - Geo check-in must be inside the club geofence; QR-code and pro-shop kiosk
   check-in as fallbacks (also the anti-GPS-spoofing path).
-- A group enters the start list only when its **last expected member** checks
-  in; queue position is the *completed* check-in time. "Go with who's here"
-  queues a partial group.
+- The first arrival creates the group and **names their playing partners**;
+  each partner claims their spot when they check in. The group enters the
+  start list when the **last named partner** arrives; queue position is the
+  *completed* check-in time. "Go with who's here" queues a partial group.
+- Forming groups appear on the board and in the app as "waiting for players",
+  with any spare slots shown as open.
+- Open slots are joinable from a list in the app (no code needed) — but a
+  stranger can never take a spot reserved for a named invitee. A friend with
+  the group's join code can always claim a spot.
+- Pro shop can **merge two queued groups** (e.g. two 2-balls into a 4-ball);
+  the merged group keeps the better position.
 - Groups bigger than the max ball size split into balanced consecutive waves
   (7 → 4+3, 9 → 3+3+3) and stay together on the list.
-- Singles can be open to matchmaking; another single can join their slot
-  while it still has room.
 - Arrival-order **and** random-draw (swindle) session modes.
 - ETAs anchor to the last actual tee-off plus the configured interval.
 - Virtual starter: a group member confirms tee-off, accepted only from inside

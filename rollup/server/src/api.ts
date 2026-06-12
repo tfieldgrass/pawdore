@@ -94,13 +94,24 @@ export class Api {
     this.add('POST', '/api/groups', 'player', true, (req) =>
       engine.createGroup(String(req.body?.sessionId), req.playerId!, {
         name: req.body?.name ? String(req.body.name) : undefined,
-        expectedSize: numOrUndef(req.body?.expectedSize),
+        inviteeNames: Array.isArray(req.body?.inviteeNames)
+          ? req.body.inviteeNames.map(String)
+          : [],
         openToJoiners: req.body?.openToJoiners,
       }),
     );
 
     this.add('POST', '/api/groups/join', 'player', true, (req) =>
       engine.joinGroup(String(req.body?.joinCode ?? ''), req.playerId!),
+    );
+
+    // Open groups a single can join from the list — no code needed.
+    this.add('GET', '/api/sessions/:id/joinable', 'player', false, (req) =>
+      engine.listJoinable(req.params.id!, engine.getPlayer(req.playerId!).name),
+    );
+
+    this.add('POST', '/api/groups/:id/join-open', 'player', true, (req) =>
+      engine.joinGroupById(req.params.id!, req.playerId!),
     );
 
     this.add('POST', '/api/groups/:id/go', 'player', true, (req) =>
@@ -186,6 +197,11 @@ export class Api {
       }
       return player;
     });
+
+    // Pro shop: merge two queued groups (e.g. two 2-balls into a 4-ball).
+    this.add('POST', '/api/admin/groups/merge', 'admin', true, (req) =>
+      engine.mergeGroups(String(req.body?.groupIdA), String(req.body?.groupIdB)),
+    );
 
     this.add('PATCH', '/api/admin/club', 'admin', true, (req) =>
       engine.updateClub(req.body ?? {}),
