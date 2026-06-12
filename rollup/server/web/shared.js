@@ -48,3 +48,12 @@ function el(tag, attrs = {}, children = []) {
   }
   return node;
 }
+
+/* Pressing Enter in any of the inputs triggers the action. */
+function submitOnEnter(action, ...inputs) {
+  for (const input of inputs) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); action(); }
+    });
+  }
+}

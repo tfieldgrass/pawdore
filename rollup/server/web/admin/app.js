@@ -38,16 +38,17 @@ function render() {
 
 function renderLogin() {
   const key = el('input', { type: 'password', placeholder: 'Admin key' });
+  const signIn = () => {
+    state.key = key.value.trim();
+    localStorage.setItem('rollup.adminKey', state.key);
+    refresh();
+  };
+  submitOnEnter(signIn, key);
   $app.append(el('div', { class: 'card', style: 'max-width:420px' }, [
     el('h2', {}, 'Clubhouse sign-in'),
+    el('p', { class: 'muted' }, 'Wrong key? The field clears and stays on this screen.'),
     key,
-    el('button', {
-      onclick: () => {
-        state.key = key.value;
-        localStorage.setItem('rollup.adminKey', key.value);
-        refresh();
-      },
-    }, 'Sign in'),
+    el('button', { onclick: signIn }, 'Sign in'),
   ]));
 }
 

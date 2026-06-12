@@ -46,26 +46,26 @@ function render() {
 function renderRegister() {
   const err = el('div', { class: 'error' });
   const name = el('input', { placeholder: 'e.g. Tom Fieldgrass', autocomplete: 'name' });
+  const go = async () => {
+    try {
+      const { token } = await api('/api/players', {
+        method: 'POST',
+        body: { name: name.value.trim() },
+      });
+      state.token = token;
+      localStorage.setItem('rollup.token', token);
+      await refreshMe();
+      render();
+    } catch (e) { err.textContent = e.message; }
+  };
+  submitOnEnter(go, name);
   $app.append(
     el('div', { class: 'card' }, [
       el('h2', {}, 'Welcome'),
       el('p', { class: 'muted' }, 'Your name as the starter and the board should show it.'),
       el('label', {}, 'Your name'),
       name,
-      el('button', {
-        onclick: async () => {
-          try {
-            const { token } = await api('/api/players', {
-              method: 'POST',
-              body: { name: name.value },
-            });
-            state.token = token;
-            localStorage.setItem('rollup.token', token);
-            await refreshMe();
-            render();
-          } catch (e) { err.textContent = e.message; }
-        },
-      }, 'Continue'),
+      el('button', { onclick: go }, 'Continue'),
       err,
     ]),
   );
@@ -73,7 +73,23 @@ function renderRegister() {
 
 function renderCheckIn() {
   const err = el('div', { class: 'error' });
-  const code = el('input', { placeholder: 'Code from the pro-shop poster' });
+  const code = el('input', {
+    placeholder: 'Code from the pro-shop poster',
+    style: 'text-transform:uppercase',
+    autocapitalize: 'characters',
+  });
+  const withCode = async () => {
+    try {
+      await api('/api/checkin', {
+        method: 'POST',
+        token: state.token,
+        body: { method: 'code', code: code.value.trim() },
+      });
+      await refreshMe();
+      render();
+    } catch (e) { err.textContent = e.message; }
+  };
+  submitOnEnter(withCode, code);
   $app.append(
     el('div', { class: 'card' }, [
       el('h2', {}, `Check in, ${state.me.player.name}`),
@@ -101,20 +117,7 @@ function renderCheckIn() {
       }, '📍 Check in with my location'),
       el('label', {}, 'Or enter the check-in code'),
       code,
-      el('button', {
-        class: 'secondary',
-        onclick: async () => {
-          try {
-            await api('/api/checkin', {
-              method: 'POST',
-              token: state.token,
-              body: { method: 'code', code: code.value },
-            });
-            await refreshMe();
-            render();
-          } catch (e) { err.textContent = e.message; }
-        },
-      }, 'Check in with code'),
+      el('button', { class: 'secondary', onclick: withCode }, 'Check in with code'),
       err,
     ]),
   );
@@ -175,20 +178,19 @@ function renderJoinOptions() {
     }, 'Join'),
     el('label', {}, 'Or join a friend’s group with their code'),
     joinCode,
-    el('button', {
-      class: 'secondary',
-      onclick: async () => {
-        try {
-          await api('/api/groups/join', {
-            method: 'POST', token: state.token, body: { joinCode: joinCode.value },
-          });
-          await refreshMe();
-          render();
-        } catch (e) { err.textContent = e.message; }
-      },
-    }, 'Join group'),
+    el('button', { class: 'secondary', onclick: joinByCode }, 'Join group'),
     err,
   ]);
+  async function joinByCode() {
+    try {
+      await api('/api/groups/join', {
+        method: 'POST', token: state.token, body: { joinCode: joinCode.value.trim() },
+      });
+      await refreshMe();
+      render();
+    } catch (e) { err.textContent = e.message; }
+  }
+  submitOnEnter(joinByCode, joinCode);
   $app.append(groupCard);
 }
 

@@ -85,7 +85,7 @@ export class Api {
         method: req.body?.method === 'code' ? 'code' : 'geo',
         lat: numOrUndef(req.body?.lat),
         lng: numOrUndef(req.body?.lng),
-        code: req.body?.code ? String(req.body.code).toUpperCase() : undefined,
+        code: req.body?.code ? String(req.body.code).trim().toUpperCase() : undefined,
       }),
     );
 
