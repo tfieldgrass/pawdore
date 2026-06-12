@@ -1,0 +1,17 @@
+{
+  "name": "Test — pregnant, combination, melasma, 33",
+  "age": "25-34",
+  "pregnant": true,
+  "environment": "sunny",
+  "skin_type": "combination",
+  "sensitivity": "moderate",
+  "end_of_day": "same",
+  "concerns_selected": ["pigmentation", "dehydration", "redness"],
+  "concerns_ranked": ["pigmentation", "redness", "dehydration"],
+  "acid_tolerance": "moderate",
+  "retinoid_tolerance": "none",
+  "avoid": ["essential oils"],
+  "texture_pref": "none",
+  "brand_affinity": [],
+  "presentation": "complete"
+}

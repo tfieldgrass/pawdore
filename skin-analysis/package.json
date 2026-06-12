@@ -1,0 +1,9 @@
+{
+  "name": "embassy-skin-analysis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prescribe": "node bin/prescribe.mjs"
+  }
+}

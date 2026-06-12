@@ -1,0 +1,17 @@
+{
+  "name": "Test — oily, congested, acid-experienced, 28",
+  "age": "25-34",
+  "pregnant": false,
+  "environment": "city",
+  "skin_type": "oily",
+  "sensitivity": "low",
+  "end_of_day": "shiny",
+  "concerns_selected": ["breakouts", "congestion", "pores", "dullness"],
+  "concerns_ranked": ["congestion", "breakouts", "pores"],
+  "acid_tolerance": "high",
+  "retinoid_tolerance": "moderate",
+  "avoid": [],
+  "texture_pref": "light",
+  "brand_affinity": ["Biologique Recherche"],
+  "presentation": "prioritised"
+}

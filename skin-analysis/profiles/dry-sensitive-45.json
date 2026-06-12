@@ -1,0 +1,17 @@
+{
+  "name": "Test — dry, sensitised, pigmentation, 45",
+  "age": "45-54",
+  "pregnant": false,
+  "environment": "city",
+  "skin_type": "dry",
+  "sensitivity": "high",
+  "end_of_day": "tight",
+  "concerns_selected": ["pigmentation", "dehydration", "fine_lines", "sensitivity"],
+  "concerns_ranked": ["pigmentation", "dehydration", "fine_lines"],
+  "acid_tolerance": "none",
+  "retinoid_tolerance": "none",
+  "avoid": ["fragrance"],
+  "texture_pref": "rich",
+  "brand_affinity": [],
+  "presentation": "complete"
+}
