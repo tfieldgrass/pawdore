@@ -207,7 +207,8 @@ tee sheets is a later (and commercially significant) step.
 
 ## 8. Things the original spec hadn't covered (beyond the above)
 
-1. **Multi-course clubs** — two courses = two queues; players pick at check-in.
+1. **Multi-course clubs** — two courses = two queues; players pick at
+   check-in. (Burhill has Old + New, so this is MVP scope — see §10.)
 2. **TV display mode** — a zero-login web URL per screen with big-type
    layouts; this is also the cheapest marketing surface in the clubhouse.
 3. **Analytics for the club** — rounds/day, queue length by hour, average
@@ -228,18 +229,69 @@ tee sheets is a later (and commercially significant) step.
 
 ## 9. Risks / open questions
 
-- **[DISCUSS] Who pays?** Club subscription (per course/month) is the obvious
-  model; HowDidiDo shows members tolerate a small app fee but club-pays is an
-  easier sale. Per-club pricing of incumbents ~£1–4k/yr territory.
-- **[DISCUSS] Beachhead** — one real club as design partner (yours?). The
-  roll-up niche is under-served precisely because incumbents sell suites;
-  start narrow (queue only), expand.
+- **Who pays / beachhead** — resolved: Burhill as design partner, BGL group
+  upsell; pricing model in §10.
 - **[DISCUSS] Quick9** needs a hands-on trial — closest in spirit, site
   blocked automated research.
 - WHS licensing constraints (above).
 - Geofence reliability near clubhouse Wi-Fi/GPS shadow — pilot will tell.
 
-## 10. Suggested build phasing
+## 10. Go-to-market: Burhill / BGL (design partner)
+
+**The club.** Burhill Golf Club, Walton-on-Thames: a 36-hole members club
+(Old course 1907, New course 2001) — which makes **multi-course support an
+MVP requirement, not a later phase**. Premium membership: ~£6,000 joining fee,
+~£2,000 annual subscription.
+
+**The group.** Burhill is the flagship of Burhill Group Limited (BGL), a
+commercial operator of ~11 golf venues (Hoebridge, Wycombe Heights, Birchwood
+Park, Thornbury, Ramsdale, Aldwickbury Park, Redbourn, Abbey Hill, Sidcup…)
+plus leisure brands. Two consequences:
+1. **One buyer, eleven venues.** A successful Burhill pilot is pitched to BGL
+   head office, not ten separate committees. Group-wide rollout is one deal.
+2. BGL's other venues are mostly **pay-and-play/proprietary** — different
+   dynamics (visitor walk-ups rather than member roll-ups), which the
+   arrival-order queue actually fits *better* than the swindle model. Design
+   both modes from the start (§4 already does).
+
+**Incumbent tech.** Burhill runs on **intelligentgolf**
+(burhill.intelligentgolf.co.uk) for tee booking and competitions. v1 strategy:
+**coexist, don't replace** — the pro shop blocks out roll-up windows in IG;
+our app owns everything inside those windows. An IG tee-sheet integration is
+the phase-4 prize.
+
+### Pricing — reality check on £10/member/month
+
+£10/member/month (£120/member/year) is well above market. Benchmarks:
+- A full club-management suite (intelligentgolf — reputedly the *most*
+  expensive) costs a club on the order of low-thousands £/year — i.e. roughly
+  **30–80p per member per month** for everything the club runs on.
+- HowDidiDo charges *members* £2.99–£9.99 **per year** for the premium app.
+- At ~1,000+ members, £10/m/m ≈ £120k+/year from one club — more than the
+  club's entire software budget several times over, and as a membership
+  pass-through it's a visible +£120 (~6%) on a £2,000 sub.
+
+**Proposed model instead:**
+- **Pilot (Burhill):** free or nominal for one season in exchange for
+  design-partner access, named case study, and an intro to BGL head office.
+- **List price:** £1–2 per member per month (club chooses to absorb or pass
+  through — at £12–24/yr pass-through it's an easy sell next to HowDidiDo's
+  £9.99), **or** a flat site licence of ~£3–6k/venue/year, whichever framing
+  the buyer prefers. The opex-not-capex instinct is right — monthly SaaS
+  billing, no upfront fee, cancel-anytime in year one removes procurement
+  friction.
+- **Group deal:** BGL portfolio pricing (e.g. 11 venues at a discounted flat
+  rate) — this is where the £100k+/year revenue actually lives, at a price
+  per venue the buyer can sign without board-level pain.
+- Phase 2/3 features (pace analytics, scoring/sweeps) become the upsell tiers
+  that grow ARPU later, once the queue has made itself indispensable.
+
+**[DISCUSS]** Who's the economic buyer at Burhill — club GM, or does anything
+member-facing route through BGL head office from day one? Worth finding out
+before the first pitch; it changes whether the pilot pitch is "help your
+roll-up" or "portfolio walk-up revenue tool".
+
+## 11. Suggested build phasing
 
 | Phase | Scope |
 |---|---|
