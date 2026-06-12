@@ -1,0 +1,22 @@
+{
+  "name": "@rollup/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Roll-Up: geofenced walk-up queue management for golf clubs",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "test": "node --import tsx --test src/domain/engine.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "ws": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "@types/ws": "^8.18.1",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3"
+  }
+}

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Roll-Up — Tee Board</title>
+  <link rel="stylesheet" href="/shared.css" />
+</head>
+<body class="board">
+  <div class="board-clock" id="clock"></div>
+  <main class="board-wrap" id="board"></main>
+  <script src="/shared.js"></script>
+  <script>
+    const $board = document.getElementById('board');
+
+    function tickClock() {
+      document.getElementById('clock').textContent =
+        new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+    setInterval(tickClock, 1000);
+    tickClock();
+
+    function render(queues) {
+      $board.replaceChildren();
+      if (!queues || queues.length === 0) {
+        $board.append(el('div', { class: 'board-course' }, [
+          el('h2', {}, 'No roll-up session running'),
+        ]));
+        return;
+      }
+      for (const q of queues) {
+        const section = el('section', { class: 'board-course' });
+        section.append(el('h2', {}, [
+          q.courseName,
+          q.sessionStatus === 'paused' ? el('span', { class: 'badge paused', style: 'margin-left:0.6em' }, 'PAUSED') : '',
+        ]));
+
+        if (q.nowOnTee) {
+          section.append(el('div', { class: 'board-now' }, [
+            el('span', {}, `⛳ ON THE TEE — ${q.nowOnTee.playerNames.join(' · ')}`),
+            el('span', {}, fmtTime(q.nowOnTee.estimatedTeeAt)),
+          ]));
+        }
+
+        const called = q.entries.filter((e) => e.status === 'called');
+        for (const c of called) {
+          section.append(el('div', { class: 'board-next' }, [
+            el('span', {}, `🔔 CALLED TO THE TEE — ${c.playerNames.join(' · ')}`),
+            el('span', {}, fmtTime(c.estimatedTeeAt)),
+          ]));
+        }
+
+        const queue = el('div', { class: 'board-queue' });
+        for (const e of q.entries.filter((x) => x.status === 'queued')) {
+          queue.append(el('div', { class: 'board-row' }, [
+            el('span', {}, `${e.position}. ${e.playerNames.join(' · ')}` +
+              (e.waveCount > 1 ? ` (${e.groupName} ${e.wave + 1}/${e.waveCount})` : '')),
+            el('span', { class: 'eta' }, `est ${fmtTime(e.estimatedTeeAt)}`),
+          ]));
+        }
+        if (q.entries.length === 0 && !q.nowOnTee) {
+          queue.append(el('div', { class: 'board-row' }, ['Queue is empty — walk straight on']));
+        }
+        section.append(queue);
+        $board.append(section);
+      }
+    }
+
+    api('/api/queues').then(render);
+    liveQueues(render);
+  </script>
+</body>
+</html>
