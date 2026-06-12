@@ -45,15 +45,17 @@ export class RollupEngine {
   ) {
     this.now = opts.now ?? Date.now;
     this.newId = opts.newId ?? randomUUID;
-    this.state = opts.restore ?? {
-      club,
-      sessions: {},
-      players: {},
-      groups: {},
-      slots: {},
-      queues: {},
-      events: [],
-    };
+    this.state = opts.restore
+      ? migrateState(opts.restore)
+      : {
+          club,
+          sessions: {},
+          players: {},
+          groups: {},
+          slots: {},
+          queues: {},
+          events: [],
+        };
   }
 
   // ---- persistence -------------------------------------------------------
@@ -800,6 +802,22 @@ export class RollupEngine {
   private log(type: string, detail: Record<string, unknown>): void {
     this.state.events.push({ at: this.now(), type, detail });
   }
+}
+
+/**
+ * Fill in fields added since the state was saved, so restoring data written
+ * by an older version never crashes the server.
+ */
+export function migrateState(state: EngineState): EngineState {
+  for (const group of Object.values(state.groups ?? {})) {
+    group.invitees ??= [];
+    group.openToJoiners ??= true;
+  }
+  for (const session of Object.values(state.sessions ?? {})) {
+    session.drawPool ??= [];
+  }
+  state.events ??= [];
+  return state;
 }
 
 /**

@@ -32,11 +32,21 @@ const tokens: Record<string, string> = saved?.tokens ?? {};
 
 const wss = new WebSocketServer({ noServer: true });
 
+function snapshot(): string | null {
+  try {
+    return JSON.stringify({
+      type: 'queues',
+      queues: engine.activeSessions().map((s) => engine.getQueueView(s.id)),
+    });
+  } catch (err) {
+    console.error('Failed to build queue snapshot:', err);
+    return null;
+  }
+}
+
 function broadcast(): void {
-  const payload = JSON.stringify({
-    type: 'queues',
-    queues: engine.activeSessions().map((s) => engine.getQueueView(s.id)),
-  });
+  const payload = snapshot();
+  if (!payload) return;
   for (const client of wss.clients) {
     if (client.readyState === client.OPEN) client.send(payload);
   }
@@ -92,12 +102,8 @@ server.on('upgrade', (req, socket, head) => {
     return;
   }
   wss.handleUpgrade(req, socket, head, (ws) => {
-    ws.send(
-      JSON.stringify({
-        type: 'queues',
-        queues: engine.activeSessions().map((s) => engine.getQueueView(s.id)),
-      }),
-    );
+    const payload = snapshot();
+    if (payload) ws.send(payload);
   });
 });
 

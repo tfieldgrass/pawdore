@@ -405,4 +405,18 @@ describe('persistence', () => {
     });
     assert.equal(restored.getQueueView(s.id).entries.length, 1);
   });
+
+  it('migrates state saved by an older version (missing new fields)', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    engine.createGroup(s.id, checkedInPlayer(engine, 'A').id);
+    const old = JSON.parse(JSON.stringify(engine.toJSON()));
+    // Simulate pre-invitee schema.
+    for (const g of Object.values(old.groups)) delete (g as any).invitees;
+    for (const sess of Object.values(old.sessions)) delete (sess as any).drawPool;
+    const restored = new RollupEngine(CLUB, { restore: old });
+    const view = restored.getQueueView(s.id); // must not throw
+    assert.equal(view.entries.length, 1);
+    assert.deepEqual(view.forming, []);
+  });
 });
