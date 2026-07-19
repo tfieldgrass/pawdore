@@ -1,0 +1,13 @@
+# Render.com blueprint: deploys the Roll-Up server from rollup/server.
+# Connect this repo as a Blueprint in Render and it builds itself.
+services:
+  - type: web
+    name: rollup
+    runtime: node
+    rootDir: rollup/server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ADMIN_KEY
+        generateValue: true

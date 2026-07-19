@@ -38,6 +38,7 @@ function render() {
   renderSessions();
   renderOpenSession();
   renderKiosk();
+  renderClubSettings();
   renderEvents();
 }
 
@@ -219,6 +220,68 @@ function renderKiosk() {
         body: { name: name.value, sessionId: sessionSel.value, openToJoiners: open.checked },
       }).then(() => { name.value = ''; }),
     }, 'Check in & queue as single'),
+  ]));
+}
+
+function renderClubSettings() {
+  const { club } = state.data;
+  const name = el('input', { value: club.name });
+  const code = el('input', { value: club.checkInCode, style: 'text-transform:uppercase' });
+  const hours = el('input', { type: 'number', value: club.checkInValidHours ?? 12, min: '1', max: '48' });
+
+  const fenceInputs = (fence) => {
+    const lat = el('input', { type: 'number', step: 'any', value: fence.lat });
+    const lng = el('input', { type: 'number', step: 'any', value: fence.lng });
+    const radius = el('input', { type: 'number', value: fence.radiusM, min: '10', max: '10000' });
+    const here = el('button', {
+      class: 'small secondary',
+      onclick: () => navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          lat.value = pos.coords.latitude;
+          lng.value = pos.coords.longitude;
+        },
+        () => alert('Location unavailable — allow location access and try again.'),
+        { enableHighAccuracy: true, timeout: 10000 },
+      ),
+    }, '📍 Use my location');
+    return { lat, lng, radius, here };
+  };
+  const clubFence = fenceInputs(club.clubGeofence);
+  const teeFence = fenceInputs(club.teeGeofence);
+
+  const fenceRow = (label, f) => el('div', {}, [
+    el('label', {}, label),
+    el('div', { class: 'row' }, [
+      el('div', {}, [el('label', {}, 'Latitude'), f.lat]),
+      el('div', {}, [el('label', {}, 'Longitude'), f.lng]),
+      el('div', {}, [el('label', {}, 'Radius (m)'), f.radius]),
+      el('div', {}, f.here),
+    ]),
+  ]);
+
+  $app.append(el('div', { class: 'card' }, [
+    el('h2', {}, 'Club settings'),
+    el('p', { class: 'muted' },
+      'Testing away from the club? Stand where players check in, press "Use my location" and save — the geofence moves to you.'),
+    el('div', { class: 'row' }, [
+      el('div', {}, [el('label', {}, 'Club name'), name]),
+      el('div', {}, [el('label', {}, 'Check-in code (QR poster)'), code]),
+      el('div', {}, [el('label', {}, 'Check-in valid (hours)'), hours]),
+    ]),
+    fenceRow('Check-in geofence (around the clubhouse)', clubFence),
+    fenceRow('Tee geofence (around the 1st tee)', teeFence),
+    el('button', {
+      onclick: () => act('/api/admin/club', {
+        method: 'PATCH',
+        body: {
+          name: name.value,
+          checkInCode: code.value,
+          checkInValidHours: Number(hours.value),
+          clubGeofence: { lat: Number(clubFence.lat.value), lng: Number(clubFence.lng.value), radiusM: Number(clubFence.radius.value) },
+          teeGeofence: { lat: Number(teeFence.lat.value), lng: Number(teeFence.lng.value), radiusM: Number(teeFence.radius.value) },
+        },
+      }),
+    }, 'Save club settings'),
   ]));
 }
 

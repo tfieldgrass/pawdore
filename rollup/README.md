@@ -73,6 +73,23 @@ the player app check in with code `BURHILL` (geolocation will fail unless you
 are actually in Walton-on-Thames), create a group, and drive the queue from
 the admin console with the board open in another tab.
 
+## Deploy (Render.com — free tier)
+
+The repo root has a `render.yaml` blueprint. In Render: **New → Blueprint**,
+connect this GitHub repo, pick branch `claude/gifted-pascal-l086qp`, deploy.
+You get an HTTPS URL like `https://rollup-xxxx.onrender.com` — HTTPS is what
+lets phone browsers use GPS, so this is the way to test the geofence for
+real. The admin key is auto-generated: Render dashboard → the `rollup`
+service → **Environment** → `ADMIN_KEY`.
+
+Free-tier caveats: the service sleeps after ~15 min idle (first visit takes
+~1 min to wake) and **saved state is wiped on redeploy/restart** — fine for
+testing, not for a pilot. For the pilot, move to a paid instance with a
+persistent disk (set `DATA_FILE` to the disk mount).
+
+Testing the geofence away from the club: admin console → **Club settings**
+→ stand where check-in should work → "📍 Use my location" → Save.
+
 ## Troubleshooting
 
 - **Which version am I running?** The startup banner prints it

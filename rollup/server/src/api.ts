@@ -214,9 +214,32 @@ export class Api {
       engine.mergeGroups(String(req.body?.groupIdA), String(req.body?.groupIdB)),
     );
 
-    this.add('PATCH', '/api/admin/club', 'admin', true, (req) =>
-      engine.updateClub(req.body ?? {}),
-    );
+    this.add('PATCH', '/api/admin/club', 'admin', true, (req) => {
+      const b = req.body ?? {};
+      const patch: Record<string, unknown> = {};
+      if (typeof b.name === 'string' && b.name.trim()) patch.name = b.name.trim();
+      if (typeof b.checkInCode === 'string' && b.checkInCode.trim()) {
+        patch.checkInCode = b.checkInCode.trim().toUpperCase();
+      }
+      const hours = Number(b.checkInValidHours);
+      if (Number.isFinite(hours)) patch.checkInValidHours = clamp(hours, 1, 48);
+      for (const key of ['clubGeofence', 'teeGeofence'] as const) {
+        const f = b[key];
+        if (
+          f &&
+          Number.isFinite(Number(f.lat)) &&
+          Number.isFinite(Number(f.lng)) &&
+          Number.isFinite(Number(f.radiusM))
+        ) {
+          patch[key] = {
+            lat: Number(f.lat),
+            lng: Number(f.lng),
+            radiusM: clamp(Number(f.radiusM), 10, 10000),
+          };
+        }
+      }
+      return engine.updateClub(patch);
+    });
   }
 
   private allQueues(): QueueView[] {
