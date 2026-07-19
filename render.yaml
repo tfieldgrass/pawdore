@@ -1,0 +1,13 @@
+# Render.com blueprint: deploys the Golfdore server from server/.
+# Connect this repo as a Blueprint in Render and it builds itself.
+services:
+  - type: web
+    name: golfdore
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: ADMIN_KEY
+        generateValue: true

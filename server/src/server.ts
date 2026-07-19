@@ -1,0 +1,137 @@
+import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createServer } from 'node:http';
+import { extname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { WebSocketServer } from 'ws';
+import { Api } from './api.ts';
+import { RollupEngine } from './domain/engine.ts';
+import type { ClubConfig } from './domain/types.ts';
+import { FileStore } from './store.ts';
+import { VERSION } from './version.ts';
+
+const PORT = Number(process.env.PORT ?? 3000);
+const ADMIN_KEY = process.env.ADMIN_KEY ?? 'burhill-dev';
+const DATA_FILE = process.env.DATA_FILE ?? fileURLToPath(new URL('../data/state.json', import.meta.url));
+const WEB_DIR = fileURLToPath(new URL('../web', import.meta.url));
+
+// Default pilot config: Burhill GC, Walton-on-Thames (Old + New courses).
+const DEFAULT_CLUB: ClubConfig = {
+  name: 'Burhill Golf Club',
+  courses: [
+    { id: 'old', name: 'Old Course' },
+    { id: 'new', name: 'New Course' },
+  ],
+  clubGeofence: { lat: 51.3525, lng: -0.4136, radiusM: 400 },
+  teeGeofence: { lat: 51.3525, lng: -0.4136, radiusM: 400 },
+  checkInCode: 'BURHILL',
+  checkInValidHours: 12,
+};
+
+const store = new FileStore(DATA_FILE);
+let saved = store.load();
+let engine: RollupEngine;
+try {
+  engine = new RollupEngine(DEFAULT_CLUB, saved ? { restore: saved.engine } : {});
+  // Prove the saved data is actually usable before serving anything.
+  for (const s of engine.activeSessions()) engine.getQueueView(s.id);
+} catch (err) {
+  console.error('Saved data could not be loaded — backing it up and starting fresh.');
+  console.error(err);
+  const backup = store.quarantine();
+  if (backup) console.error(`  old data moved to: ${backup}`);
+  saved = null;
+  engine = new RollupEngine(DEFAULT_CLUB, {});
+}
+const tokens: Record<string, string> = saved?.tokens ?? {};
+
+const wss = new WebSocketServer({ noServer: true });
+
+function snapshot(): string | null {
+  try {
+    return JSON.stringify({
+      type: 'queues',
+      queues: engine.activeSessions().map((s) => engine.getQueueView(s.id)),
+    });
+  } catch (err) {
+    console.error('Failed to build queue snapshot:', err);
+    return null;
+  }
+}
+
+function broadcast(): void {
+  const payload = snapshot();
+  if (!payload) return;
+  for (const client of wss.clients) {
+    if (client.readyState === client.OPEN) client.send(payload);
+  }
+}
+
+const api = new Api({
+  engine,
+  tokens,
+  adminKey: ADMIN_KEY,
+  onMutation: () => {
+    store.save({ engine: engine.toJSON(), tokens });
+    broadcast();
+  },
+});
+
+const MIME: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png',
+  '.webmanifest': 'application/manifest+json',
+};
+
+function serveStatic(pathname: string, res: import('node:http').ServerResponse): void {
+  let rel = normalize(pathname).replace(/^([/\\.])+/, '');
+  let file = join(WEB_DIR, rel);
+  if (existsSync(file) && statSync(file).isDirectory()) file = join(file, 'index.html');
+  if (!existsSync(file)) {
+    res.writeHead(404, { 'content-type': 'text/plain' });
+    res.end('Not found');
+    return;
+  }
+  res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
+  createReadStream(file).pipe(res);
+}
+
+const server = createServer(async (req, res) => {
+  try {
+    if (await api.handle(req, res)) return;
+    const url = new URL(req.url ?? '/', 'http://local');
+    serveStatic(url.pathname === '/' ? '/player/index.html' : url.pathname, res);
+  } catch (err) {
+    console.error(err);
+    if (!res.headersSent) res.writeHead(500);
+    res.end();
+  }
+});
+
+server.on('upgrade', (req, socket, head) => {
+  if (new URL(req.url ?? '/', 'http://local').pathname !== '/ws') {
+    socket.destroy();
+    return;
+  }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    const payload = snapshot();
+    if (payload) ws.send(payload);
+  });
+});
+
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    store.flush();
+    process.exit(0);
+  });
+}
+
+server.listen(PORT, () => {
+  console.log(`Roll-Up server v${VERSION} — http://localhost:${PORT}`);
+  console.log(`  player app : http://localhost:${PORT}/player/`);
+  console.log(`  tee board  : http://localhost:${PORT}/board/`);
+  console.log(`  admin      : http://localhost:${PORT}/admin/  (key: ${ADMIN_KEY})`);
+  console.log(`  data file  : ${DATA_FILE}`);
+});
