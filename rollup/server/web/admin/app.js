@@ -28,6 +28,11 @@ function act(path, { method = 'POST', body } = {}) {
 }
 
 function render() {
+  // Don't wipe a half-typed kiosk name or form because an event arrived.
+  const active = document.activeElement;
+  if (active && $app.contains(active) && ['INPUT', 'SELECT'].includes(active.tagName)) {
+    return; // the next event after they finish typing will catch up
+  }
   $app.replaceChildren();
   if (!state.key || !state.data) return renderLogin();
   renderSessions();

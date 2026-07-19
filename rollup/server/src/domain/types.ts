@@ -20,6 +20,8 @@ export interface ClubConfig {
   teeGeofence: GeoFence;
   /** Rotating code printed on the QR poster in the pro shop / locker room. */
   checkInCode: string;
+  /** Hours a check-in stays valid before the player must check in again. */
+  checkInValidHours: number;
 }
 
 export interface SessionSettings {

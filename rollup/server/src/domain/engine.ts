@@ -104,7 +104,7 @@ export class RollupEngine {
    */
   checkIn(playerId: string, proof: CheckInProof): Player {
     const player = this.getPlayer(playerId);
-    if (player.checkedInAt !== null) return player;
+    if (this.checkInFresh(player)) return player;
 
     if (proof.method === 'geo') {
       if (proof.lat === undefined || proof.lng === undefined) {
@@ -128,9 +128,33 @@ export class RollupEngine {
     return player;
   }
 
+  /**
+   * A check-in only counts while it is fresh (club-configurable, default
+   * 12h) — being at the club on Saturday must not let you queue from your
+   * sofa on Tuesday. Expiry clears the stamp so views reflect it too.
+   */
+  private checkInFresh(player: Player): boolean {
+    if (player.checkedInAt === null) return false;
+    const validMs = this.state.club.checkInValidHours * 3_600_000;
+    if (this.now() - player.checkedInAt > validMs) {
+      player.checkedInAt = null;
+      player.checkInMethod = null;
+      this.log('player.checkin_expired', { playerId: player.id });
+      return false;
+    }
+    return true;
+  }
+
+  /** Fetch a player, applying check-in expiry first (for /api/me views). */
+  refreshCheckIn(playerId: string): Player {
+    const player = this.getPlayer(playerId);
+    this.checkInFresh(player);
+    return player;
+  }
+
   private requireCheckedIn(playerId: string): Player {
     const p = this.getPlayer(playerId);
-    if (p.checkedInAt === null) {
+    if (!this.checkInFresh(p)) {
       throw new EngineError('not_checked_in', 'Check in at the club first');
     }
     return p;
@@ -184,6 +208,27 @@ export class RollupEngine {
   setSessionStatus(sessionId: string, status: 'open' | 'paused' | 'closed'): Session {
     const session = this.getSession(sessionId);
     session.status = status;
+    if (status === 'closed') {
+      // End of the roll-up: clear the list so nothing lingers as a ghost.
+      for (const group of Object.values(this.state.groups)) {
+        if (
+          group.sessionId === sessionId &&
+          (group.status === 'forming' || group.status === 'queued')
+        ) {
+          group.status = 'withdrawn';
+        }
+      }
+      for (const slot of Object.values(this.state.slots)) {
+        if (
+          slot.sessionId === sessionId &&
+          (slot.status === 'queued' || slot.status === 'called')
+        ) {
+          slot.status = 'removed';
+        }
+      }
+      this.state.queues[sessionId] = [];
+      session.drawPool = [];
+    }
     this.log('session.status', { sessionId, status });
     return session;
   }
@@ -390,6 +435,56 @@ export class RollupEngine {
     absorb.status = 'withdrawn';
     this.log('group.merged', { kept: keep.id, absorbed: absorb.id });
     return keep;
+  }
+
+  /**
+   * One player leaves without cancelling the group. Their claimed invitee
+   * spot reopens (the group keeps waiting for that name); if they were in a
+   * queued slot they come off it, and an emptied slot leaves the list. The
+   * last member leaving withdraws the group; a leaving creator hands the
+   * group to the next member.
+   */
+  leaveGroup(groupId: string, playerId: string): Group {
+    const group = this.getGroup(groupId);
+    if (group.status !== 'forming' && group.status !== 'queued') {
+      throw new EngineError('invalid', 'Group is not active');
+    }
+    if (!group.memberIds.includes(playerId)) {
+      throw new EngineError('not_found', 'Not a member of this group');
+    }
+
+    group.memberIds = group.memberIds.filter((id) => id !== playerId);
+    for (const invitee of group.invitees) {
+      if (invitee.claimedBy === playerId) invitee.claimedBy = null;
+    }
+    if (group.status === 'queued') {
+      const slot = this.slotsForGroup(group.id).find(
+        (s) =>
+          s.playerIds.includes(playerId) &&
+          (s.status === 'queued' || s.status === 'called'),
+      );
+      if (slot) {
+        slot.playerIds = slot.playerIds.filter((id) => id !== playerId);
+        if (slot.playerIds.length === 0) {
+          slot.status = 'removed';
+          this.removeFromQueue(group.sessionId, slot.id);
+        }
+      }
+    }
+
+    if (group.memberIds.length === 0) {
+      group.status = 'withdrawn';
+      for (const slot of this.slotsForGroup(groupId)) {
+        if (slot.status === 'queued' || slot.status === 'called') {
+          slot.status = 'removed';
+          this.removeFromQueue(group.sessionId, slot.id);
+        }
+      }
+    } else if (group.creatorId === playerId) {
+      group.creatorId = group.memberIds[0]!;
+    }
+    this.log('group.left', { groupId, playerId });
+    return group;
   }
 
   withdrawGroup(groupId: string, byPlayerId: string | null): Group {
@@ -816,6 +911,7 @@ export function migrateState(state: EngineState): EngineState {
   for (const session of Object.values(state.sessions ?? {})) {
     session.drawPool ??= [];
   }
+  if (state.club) state.club.checkInValidHours ??= 12;
   state.events ??= [];
   return state;
 }

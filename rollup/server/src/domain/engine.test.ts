@@ -13,6 +13,7 @@ const CLUB: ClubConfig = {
   clubGeofence: { lat: 51.36, lng: -0.4, radiusM: 300 },
   teeGeofence: { lat: 51.3609, lng: -0.4, radiusM: 50 },
   checkInCode: 'BURHILL',
+  checkInValidHours: 12,
 };
 
 const AT_CLUB = { lat: 51.3601, lng: -0.4001 };
@@ -335,7 +336,91 @@ describe('the tee', () => {
   });
 });
 
+describe('leaving a group', () => {
+  it('a member can leave a queued group without collapsing it', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const a = checkedInPlayer(engine, 'A');
+    const g = engine.createGroup(s.id, a.id, { inviteeNames: ['B'] });
+    const b = checkedInPlayer(engine, 'B');
+    engine.joinGroup(g.joinCode, b.id);
+
+    engine.leaveGroup(g.id, b.id);
+    const entry = engine.getQueueView(s.id).entries[0]!;
+    assert.deepEqual(entry.playerNames, ['A']);
+    assert.equal(g.status, 'queued');
+  });
+
+  it('a leaving creator hands the group on; the last leaver withdraws it', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const a = checkedInPlayer(engine, 'A');
+    const g = engine.createGroup(s.id, a.id, { inviteeNames: ['B'] });
+    const b = checkedInPlayer(engine, 'B');
+    engine.joinGroup(g.joinCode, b.id);
+
+    engine.leaveGroup(g.id, a.id);
+    assert.equal(g.creatorId, b.id);
+    engine.leaveGroup(g.id, b.id);
+    assert.equal(g.status, 'withdrawn');
+    assert.equal(engine.getQueueView(s.id).entries.length, 0);
+  });
+
+  it('leaving a forming group reopens the claimed invitee spot', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const a = checkedInPlayer(engine, 'A');
+    const g = engine.createGroup(s.id, a.id, { inviteeNames: ['B', 'C'] });
+    const b = checkedInPlayer(engine, 'B');
+    engine.joinGroup(g.joinCode, b.id);
+    engine.leaveGroup(g.id, b.id);
+    assert.equal(g.status, 'forming');
+    assert.deepEqual(
+      engine.getQueueView(s.id).forming[0]!.waitingForNames.sort(),
+      ['B', 'C'],
+    );
+  });
+});
+
+describe('check-in expiry', () => {
+  it('a stale check-in no longer counts and can be renewed at the club', () => {
+    const { engine, clock } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    const p = checkedInPlayer(engine, 'Yesterday Yan');
+    clock.tick(13 * 3_600_000); // beyond the 12h validity
+    assert.throws(
+      () => engine.createGroup(s.id, p.id),
+      (e: EngineError) => e.code === 'not_checked_in',
+    );
+    assert.equal(engine.refreshCheckIn(p.id).checkedInAt, null);
+    // Back at the club, checking in again works.
+    engine.checkIn(p.id, { method: 'geo', ...AT_CLUB });
+    engine.createGroup(s.id, p.id);
+    assert.equal(engine.getQueueView(s.id).entries.length, 1);
+  });
+});
+
 describe('sessions', () => {
+  it('closing a session clears queued and forming groups', () => {
+    const { engine } = makeEngine();
+    const s = engine.openSession(SETTINGS);
+    engine.createGroup(s.id, checkedInPlayer(engine, 'Queued Quin').id);
+    engine.createGroup(s.id, checkedInPlayer(engine, 'Forming Fred').id, {
+      inviteeNames: ['Ghost'],
+    });
+    engine.setSessionStatus(s.id, 'closed');
+    const view = engine.getQueueView(s.id);
+    assert.equal(view.entries.length, 0);
+    assert.equal(view.forming.length, 0);
+    // Players are free to join a new session.
+    const quin = Object.values(engine.toJSON().players).find(
+      (p) => p.name === 'Queued Quin',
+    )!;
+    const s2 = engine.openSession({ ...SETTINGS, courseId: 'new' });
+    engine.createGroup(s2.id, quin.id);
+    assert.equal(engine.getQueueView(s2.id).entries.length, 1);
+  });
+
   it('pausing (frost delay) blocks new queue activity but keeps order', () => {
     const { engine } = makeEngine();
     const s = engine.openSession(SETTINGS);

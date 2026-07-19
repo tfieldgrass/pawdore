@@ -27,10 +27,26 @@ async function boot() {
   document.getElementById('club-name').textContent = state.club.name;
   await refreshMe();
   render();
-  liveQueues((queues) => {
+  liveQueues(async (queues) => {
     state.queues = queues;
-    refreshMe().then(render);
+    state.club = await api('/api/club').catch(() => state.club);
+    refreshMe().then(safeRender);
   });
+}
+
+/* Don't wipe a half-typed form because someone else checked in. */
+function safeRender() {
+  const active = document.activeElement;
+  if (active && $app.contains(active) && ['INPUT', 'SELECT'].includes(active.tagName)) {
+    return; // next update after they finish typing will catch up
+  }
+  render();
+}
+
+function askNotifyPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 }
 
 function render() {
@@ -85,6 +101,7 @@ function renderCheckIn() {
         token: state.token,
         body: { method: 'code', code: code.value.trim() },
       });
+      askNotifyPermission();
       await refreshMe();
       render();
     } catch (e) { err.textContent = e.message; }
@@ -106,6 +123,7 @@ function renderCheckIn() {
                   token: state.token,
                   body: { method: 'geo', lat: pos.coords.latitude, lng: pos.coords.longitude },
                 });
+                askNotifyPermission();
                 await refreshMe();
                 render();
               } catch (e) { err.textContent = e.message; }
@@ -319,19 +337,44 @@ function renderQueueStatus() {
         ? el('p', { class: 'muted' }, `Open to joiners — code ${group.joinCode}`)
         : '',
     ]));
+
+    // Front of the queue with nobody called: walk straight on.
+    if (first.position === 1 && first.status === 'queued') {
+      $app.append(el('div', { class: 'card' }, [
+        el('h2', {}, 'You’re at the front'),
+        el('p', { class: 'muted' }, 'When the tee is clear, off you go — confirm as you play away.'),
+        el('button', { onclick: () => confirmTeeOff(first.slotId) }, 'We’re off — confirm tee-off'),
+        el('div', { class: 'error', id: 'tee-err' }),
+      ]));
+    }
   }
 
-  $app.append(el('div', { class: 'card' }, [
-    el('button', {
-      class: 'danger',
-      onclick: async () => {
-        if (!confirm('Leave the roll-up?')) return;
-        await api(`/api/groups/${group.id}/withdraw`, { method: 'POST', token: state.token });
-        await refreshMe();
-        render();
-      },
-    }, 'Withdraw from the roll-up'),
-  ]));
+  const isCreator = group && group.creatorId === me.player.id;
+  const leaveBtn = (label, path, confirmText) => el('button', {
+    class: 'danger',
+    onclick: async () => {
+      if (!confirm(confirmText)) return;
+      await api(path, { method: 'POST', token: state.token });
+      await refreshMe();
+      render();
+    },
+  }, label);
+
+  if (group) {
+    const buttons = [];
+    if (group.memberIds.length > 1) {
+      buttons.push(leaveBtn('Leave the group (others stay in)',
+        `/api/groups/${group.id}/leave`, 'Leave this group? The others keep their place.'));
+      if (isCreator) {
+        buttons.push(leaveBtn('Withdraw the whole group',
+          `/api/groups/${group.id}/withdraw`, 'Withdraw the whole group from the roll-up?'));
+      }
+    } else {
+      buttons.push(leaveBtn('Withdraw from the roll-up',
+        `/api/groups/${group.id}/withdraw`, 'Leave the roll-up?'));
+    }
+    $app.append(el('div', { class: 'card' }, buttons));
+  }
 }
 
 async function confirmTeeOff(slotId) {

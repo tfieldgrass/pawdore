@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { EngineError, RollupEngine } from './domain/engine.ts';
 import type { QueueView, SessionSettings } from './domain/types.ts';
+import { VERSION } from './version.ts';
 
 export interface ApiContext {
   engine: RollupEngine;
@@ -60,6 +61,12 @@ export class Api {
     const { engine } = this.ctx;
 
     // ---- public ----
+    this.add('GET', '/api/health', 'none', false, () => ({
+      ok: true,
+      version: VERSION,
+      club: engine.club.name,
+    }));
+
     this.add('GET', '/api/queues', 'none', false, () => this.allQueues());
     this.add('GET', '/api/club', 'none', false, () => ({
       name: engine.club.name,
@@ -120,6 +127,10 @@ export class Api {
 
     this.add('POST', '/api/groups/:id/withdraw', 'player', true, (req) =>
       engine.withdrawGroup(req.params.id!, req.playerId!),
+    );
+
+    this.add('POST', '/api/groups/:id/leave', 'player', true, (req) =>
+      engine.leaveGroup(req.params.id!, req.playerId!),
     );
 
     this.add('POST', '/api/draw/join', 'player', true, (req) =>
@@ -214,7 +225,7 @@ export class Api {
 
   private meView(playerId: string) {
     const { engine } = this.ctx;
-    const player = engine.getPlayer(playerId);
+    const player = engine.refreshCheckIn(playerId);
     const result: any = { player, group: null, slots: [] };
     for (const session of engine.activeSessions()) {
       const group = engine.activeGroupForPlayer(session.id, playerId);

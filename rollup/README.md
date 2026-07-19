@@ -73,6 +73,24 @@ the player app check in with code `BURHILL` (geolocation will fail unless you
 are actually in Walton-on-Thames), create a group, and drive the queue from
 the admin console with the board open in another tab.
 
+## Troubleshooting
+
+- **Which version am I running?** The startup banner prints it
+  (`Roll-Up server v0.2.0 — …`), and `http://localhost:3000/api/health`
+  returns it. If it doesn't match the latest in `src/version.ts` on the
+  branch, you're running an old copy — delete the whole folder and
+  re-download; extracting a new ZIP *over* an old folder leaves stale files
+  behind.
+- **Old/broken saved data**: the server validates `data/state.json` at
+  startup; unusable data is moved aside to `state.json.corrupt-<timestamp>`
+  and the server starts fresh (it never crash-loops on bad data). To reset
+  manually: stop the server and delete the `data` folder.
+- **"EADDRINUSE" / can't reach the site**: another copy of the server is
+  (or isn't) running. One server per port — stop old terminals first
+  (Windows: `taskkill /f /im node.exe`).
+- **Check-ins expire** after 12h (club-configurable `checkInValidHours`), so
+  yesterday's testing session won't leave phantom checked-in players today.
+
 ## Not yet built (per the brief's phasing)
 
 Push notifications (currently in-app/WebSocket + browser Notification),

@@ -49,11 +49,16 @@ function el(tag, attrs = {}, children = []) {
   return node;
 }
 
-/* Pressing Enter in any of the inputs triggers the action. */
+/* Pressing Enter in any of the inputs triggers the action. The input is
+   blurred first so typing-protection doesn't block the follow-up render. */
 function submitOnEnter(action, ...inputs) {
   for (const input of inputs) {
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); action(); }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        input.blur();
+        action();
+      }
     });
   }
 }

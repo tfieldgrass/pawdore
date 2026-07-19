@@ -7,6 +7,7 @@ import { Api } from './api.ts';
 import { RollupEngine } from './domain/engine.ts';
 import type { ClubConfig } from './domain/types.ts';
 import { FileStore } from './store.ts';
+import { VERSION } from './version.ts';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const ADMIN_KEY = process.env.ADMIN_KEY ?? 'burhill-dev';
@@ -23,11 +24,24 @@ const DEFAULT_CLUB: ClubConfig = {
   clubGeofence: { lat: 51.3525, lng: -0.4136, radiusM: 400 },
   teeGeofence: { lat: 51.3525, lng: -0.4136, radiusM: 400 },
   checkInCode: 'BURHILL',
+  checkInValidHours: 12,
 };
 
 const store = new FileStore(DATA_FILE);
-const saved = store.load();
-const engine = new RollupEngine(DEFAULT_CLUB, saved ? { restore: saved.engine } : {});
+let saved = store.load();
+let engine: RollupEngine;
+try {
+  engine = new RollupEngine(DEFAULT_CLUB, saved ? { restore: saved.engine } : {});
+  // Prove the saved data is actually usable before serving anything.
+  for (const s of engine.activeSessions()) engine.getQueueView(s.id);
+} catch (err) {
+  console.error('Saved data could not be loaded — backing it up and starting fresh.');
+  console.error(err);
+  const backup = store.quarantine();
+  if (backup) console.error(`  old data moved to: ${backup}`);
+  saved = null;
+  engine = new RollupEngine(DEFAULT_CLUB, {});
+}
 const tokens: Record<string, string> = saved?.tokens ?? {};
 
 const wss = new WebSocketServer({ noServer: true });
@@ -107,9 +121,17 @@ server.on('upgrade', (req, socket, head) => {
   });
 });
 
+for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+  process.on(signal, () => {
+    store.flush();
+    process.exit(0);
+  });
+}
+
 server.listen(PORT, () => {
-  console.log(`Roll-Up server: http://localhost:${PORT}`);
+  console.log(`Roll-Up server v${VERSION} — http://localhost:${PORT}`);
   console.log(`  player app : http://localhost:${PORT}/player/`);
   console.log(`  tee board  : http://localhost:${PORT}/board/`);
   console.log(`  admin      : http://localhost:${PORT}/admin/  (key: ${ADMIN_KEY})`);
+  console.log(`  data file  : ${DATA_FILE}`);
 });
